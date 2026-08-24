@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>买菜成本联动计算器</title>
+<title>餐谋 · 餐饮经营成本助手</title>
 <style>
 :root{
   --bg:#eef2f5; --card:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e2e8f0;
@@ -122,7 +122,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
 <body>
 <div class="topbar">
   <div class="brand">
-    <h1>🛒 买菜成本联动计算器</h1>
+    <h1>🍳 餐谋</h1>
     <span class="tag">采购 → 场地 → 人力 → 配送 → 定价，全链路实时联动</span>
   </div>
   <nav class="tabs" id="tabNav">
@@ -505,7 +505,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
   </section>
 </main>
 
-<footer>买菜成本联动计算器 · 数据自动保存于浏览器本地 · 建议使用 Chrome / Edge 最新版</footer>
+<footer>餐谋 · 数据自动保存于浏览器本地 · 建议使用 Chrome / Edge 最新版</footer>
 
 <script>
 'use strict';
@@ -1240,7 +1240,7 @@ function exportData(){
   const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = '买菜成本联动数据_' + todayStr().replace(/-/g,'') + '.json';
+  a.download = '餐谋数据_' + todayStr().replace(/-/g,'') + '.json';
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
@@ -1369,7 +1369,7 @@ async function ghUpload(cfg){
   } else if(res.status !== 404){
     throw new Error('读取云端文件失败 HTTP ' + res.status);
   }
-  const body = { message:'买菜成本数据同步 ' + new Date().toLocaleString('zh-CN'), content: b64utf8(JSON.stringify(state, null, 2)), branch: cfg.branch };
+  const body = { message:'餐谋数据同步 ' + new Date().toLocaleString('zh-CN'), content: b64utf8(JSON.stringify(state, null, 2)), branch: cfg.branch };
   if(sha) body.sha = sha;
   const up = await fetch(url.split('?')[0], { method:'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
   if(!up.ok){
@@ -1514,7 +1514,7 @@ async function chooseLocalFile(){
 async function createLocalFile(){
   if(!window.showSaveFilePicker){ setFileStatus('当前浏览器不支持文件系统 API，请使用 Chrome / Edge 最新版，或使用「导出 / 导入 JSON」备份。'); return; }
   try{
-    fileHandle = await window.showSaveFilePicker({ suggestedName:'买菜成本数据.json', types:[{ description:'JSON 数据文件', accept:{'application/json':['.json']} }] });
+    fileHandle = await window.showSaveFilePicker({ suggestedName:'餐谋数据.json', types:[{ description:'JSON 数据文件', accept:{'application/json':['.json']} }] });
     await writeLocalFile();
     setFileStatus('✅ 已创建并关联本地文件：' + fileHandle.name + '（修改后自动写入）');
   }catch(err){
