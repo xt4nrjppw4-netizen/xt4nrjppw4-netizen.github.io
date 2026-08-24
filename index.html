@@ -132,6 +132,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
     <button class="tab-btn" data-tab="staff">👥 人力成本</button>
     <button class="tab-btn" data-tab="delivery">🛵 配送成本</button>
     <button class="tab-btn" data-tab="dishes">🍽️ 菜品定价</button>
+    <button class="tab-btn" data-tab="orders">🧾 订单管理</button>
     <button class="tab-btn" data-tab="equipment">🍳 厨房设备</button>
     <button class="tab-btn" data-tab="data">💾 数据管理</button>
     <button class="tab-btn" data-tab="help">📖 使用说明</button>
@@ -171,6 +172,16 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
         <div class="label">🎯 预计月净利率</div>
         <div class="value" id="kpi-netrate">0%</div>
         <div class="sub" id="kpi-netrate-sub">利润 ÷ 营业额</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>🧾 实际订单收入（来自「订单管理」的真实流水）</h2>
+      <div class="kpi-grid">
+        <div class="card kpi"><div class="label">📅 今日实收</div><div class="value accent" id="kpi-oday">¥0</div><div class="sub" id="kpi-oday-sub">今日 0 单</div></div>
+        <div class="card kpi"><div class="label">📅 本月实收</div><div class="value" id="kpi-omonth">¥0</div><div class="sub" id="kpi-omonth-sub">本月 0 单</div></div>
+        <div class="card kpi"><div class="label">📅 本年实收</div><div class="value" id="kpi-oyear">¥0</div><div class="sub" id="kpi-oyear-sub">本年 0 单</div></div>
+        <div class="card kpi"><div class="label">💰 累计实收</div><div class="value" id="kpi-ototal">¥0</div><div class="sub" id="kpi-ototal-sub">累计 0 单</div></div>
       </div>
     </div>
 
@@ -349,6 +360,75 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
       </div>
       <div class="note">分摊成本 =（每日场地成本 + 每日人力成本）÷ 预计日均出餐份数，按份数均摊固定成本；菜品总成本 = 食材成本 + 分摊成本 + 每单配送成本。低客单引流款（如米饭、豆浆）分摊后会呈现亏损属正常现象，可通过提价、提升出餐量或减少固定成本改善。</div>
       <div id="dishList"></div>
+    </div>
+  </section>
+
+  <!-- ============ 订单管理 ============ -->
+  <section id="tab-orders" class="tab">
+    <div class="card">
+      <h2>🧾 订单管理（实际流水）</h2>
+      <div class="note">记录每一笔真实订单：精确到日期和时间、渠道、金额、份数。自动汇总今日 / 昨日 / 本周 / 本月 / 本年 / 累计收入，数据会随「云端同步」自动在手机和电脑间保持一致。</div>
+      <div class="kpi-grid" style="margin-top:14px">
+        <div class="card kpi"><div class="label">📅 今日收入</div><div class="value accent" id="ord-today">¥0</div><div class="sub" id="ord-today-sub">今日 0 单</div></div>
+        <div class="card kpi"><div class="label">📅 昨日收入</div><div class="value" id="ord-yesterday">¥0</div><div class="sub" id="ord-yesterday-sub">昨日 0 单</div></div>
+        <div class="card kpi"><div class="label">📅 本周收入</div><div class="value" id="ord-week">¥0</div><div class="sub" id="ord-week-sub">本周 0 单</div></div>
+        <div class="card kpi"><div class="label">📅 本月收入</div><div class="value" id="ord-month">¥0</div><div class="sub" id="ord-month-sub">本月 0 单</div></div>
+        <div class="card kpi"><div class="label">📅 本年收入</div><div class="value" id="ord-year">¥0</div><div class="sub" id="ord-year-sub">本年 0 单</div></div>
+        <div class="card kpi"><div class="label">💰 累计收入</div><div class="value" id="ord-total">¥0</div><div class="sub" id="ord-total-sub">累计 0 单</div></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>➕ 添加 / 编辑订单</h2>
+        <div class="form-grid">
+          <div class="field"><label>日期</label><input id="ord-date" type="date"></div>
+          <div class="field"><label>时间</label><input id="ord-time" type="time"></div>
+          <div class="field"><label>渠道</label>
+            <select id="ord-channel">
+              <option>堂食</option><option>外卖</option><option>自提</option><option>团购</option><option>其他</option>
+            </select>
+          </div>
+          <div class="field"><label>订单金额（元）</label><input id="ord-amount" type="number" min="0" step="0.01" placeholder="如 68.00"></div>
+          <div class="field"><label>份数 / 人数</label><input id="ord-qty" type="number" min="1" step="1" value="1"></div>
+          <div class="field" style="grid-column:span 2"><label>备注</label><input id="ord-note" placeholder="可选，如 3 号桌 / 美团 22 号 / 双人餐"></div>
+        </div>
+        <div class="toolbar" style="margin-top:12px">
+          <button class="btn primary" onclick="saveOrder()">💾 保存订单</button>
+          <button class="btn ghost" onclick="clearOrderForm()">清空</button>
+          <span class="muted" id="ord-form-status"></span>
+        </div>
+        <div class="toolbar" style="margin-top:8px">
+          <button class="btn ghost" onclick="addSampleOrders(7)">＋ 补录近 7 天示例订单</button>
+          <span class="muted">清空订单后可用来快速生成测试数据</span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>📊 近 30 天收入趋势</h2>
+        <canvas id="ordTrend" style="width:100%;height:220px"></canvas>
+        <h2 style="margin-top:14px">🥧 本月渠道占比</h2>
+        <canvas id="ordChannel" style="width:100%;height:200px"></canvas>
+        <div class="legend" id="ordChannelLegend"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📋 订单流水明细</h2>
+      <div class="toolbar">
+        <label style="white-space:nowrap">从</label><input id="ord-from" type="date">
+        <label style="white-space:nowrap">至</label><input id="ord-to" type="date">
+        <select id="ord-filterChannel">
+          <option value="">全部渠道</option><option>堂食</option><option>外卖</option><option>自提</option><option>团购</option><option>其他</option>
+        </select>
+        <button class="btn ghost" onclick="resetOrderFilter()">本月</button>
+        <span class="muted" id="ord-filter-sum"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="data" style="min-width:760px">
+          <thead><tr><th>日期</th><th>时间</th><th>渠道</th><th>金额</th><th>份数</th><th>备注</th><th>操作</th></tr></thead>
+          <tbody id="ordBody"></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
@@ -631,6 +711,28 @@ const SAMPLE_DISHES = [
   DISH('d11','现磨豆浆','饮品',8,50,[BOM('i53',0.1),BOM('i43',0.05)])
 ];
 
+/* 订单示例数据（按今天往前 30 天自动生成，打开即可看到收入趋势） */
+const ORDER_CHANNELS = ['堂食','外卖','自提','团购','其他'];
+function pad2(n){ return String(n).padStart(2,'0'); }
+function dateStr(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
+function sampleOrders(){
+  const out = [];
+  const now = new Date();
+  for(let d = 29; d >= 0; d--){
+    const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate() - d);
+    const ds = dateStr(dt);
+    const n = d === 0 ? 4 : (d % 7 === 0 ? 2 : 3);
+    for(let i = 0; i < n; i++){
+      const hh = 10 + ((i * 3 + d) % 10);
+      const mm = (i * 17 + d * 7) % 60;
+      const amt = Math.round((38 + ((d * 7 + i * 13) % 90) + ((d + i) % 3) * 12) * 100) / 100;
+      out.push({ id:'so' + d + '-' + i, date: ds, time: pad2(hh) + ':' + pad2(mm), channel: ORDER_CHANNELS[i % ORDER_CHANNELS.length], amount: amt, qty: 1 + (i % 2), note: d % 5 === 0 ? '示例订单' : '' });
+    }
+  }
+  return out;
+}
+const SAMPLE_ORDERS = sampleOrders();
+
 const DEFAULT_STATE = {
   ingredients: SAMPLE_INGREDIENTS,
   dishes: SAMPLE_DISHES,
@@ -655,6 +757,7 @@ const DEFAULT_STATE = {
     EQ('e9','电饭煲','加工',2,600,4),
     EQ('e10','排烟风机','其他',1,3500,5)
   ],
+  orders: SAMPLE_ORDERS,
   settings: { expectedDailyOrders:300, initialStockBudget:5000, syncMode:'github', syncUrl:'', syncToken:'', syncRepo:'xt4nrjppw4-netizen/buycai-data', syncPath:'data.json', syncBranch:'main', syncAuto:false }
 };
 
@@ -674,7 +777,7 @@ function normalize(s){
   const rawSet = (s && s.settings) || {};
   out.settings = Object.assign({}, d.settings, rawSet);
   if(rawSet.syncMode == null) out.settings.syncMode = rawSet.syncUrl ? 'url' : 'github';
-  ['ingredients','dishes','staff','equipment'].forEach(k => { if(!Array.isArray(out[k])) out[k] = []; });
+  ['ingredients','dishes','staff','equipment','orders'].forEach(k => { if(!Array.isArray(out[k])) out[k] = []; });
   return out;
 }
 function loadState(){
@@ -687,7 +790,7 @@ function loadState(){
 function save(){ try{ state.savedAt = new Date().toISOString(); localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 function markDataChanged(){ state.updatedAt = new Date().toISOString(); }
 function emptyState(){
-  return { ingredients:[], dishes:[], venue:clone(DEFAULT_STATE.venue), staff:[], delivery:clone(DEFAULT_STATE.delivery), equipment:[], settings:clone(DEFAULT_STATE.settings) };
+  return { ingredients:[], dishes:[], venue:clone(DEFAULT_STATE.venue), staff:[], delivery:clone(DEFAULT_STATE.delivery), equipment:[], orders:[], settings:clone(DEFAULT_STATE.settings) };
 }
 let state = loadState();
 
@@ -1152,6 +1255,16 @@ function updateDashboard(){
   const profit = projectedProfit();
   const netRate = rev > 0 ? profit / rev : 0;
   const days = businessDays();
+  const oa = orderAgg();
+
+  setText('kpi-oday', money0(oa.today.amt));
+  setText('kpi-oday-sub', '今日 ' + oa.today.n + ' 单');
+  setText('kpi-omonth', money0(oa.month.amt));
+  setText('kpi-omonth-sub', '本月 ' + oa.month.n + ' 单');
+  setText('kpi-oyear', money0(oa.year.amt));
+  setText('kpi-oyear-sub', '本年 ' + oa.year.n + ' 单');
+  setText('kpi-ototal', money0(oa.all.amt));
+  setText('kpi-ototal-sub', '累计 ' + oa.all.n + ' 单');
 
   setText('kpi-invest', money0(invest));
   setText('kpi-invest-sub', `设备 ${money0(equipmentTotalInvest())} · 装修 ${money0(+state.venue.renovationTotal||0)} · 首批食材 ${money0(+state.settings.initialStockBudget||0)}`);
@@ -1607,12 +1720,14 @@ function renderAll(){
   document.getElementById('dataStats').innerHTML = [
     { l:'食材种类', v: state.ingredients.length + ' 种' },
     { l:'菜品数量', v: state.dishes.length + ' 道' },
+    { l:'订单笔数', v: (state.orders || []).length + ' 笔' },
     { l:'员工岗位', v: state.staff.length + ' 个' },
     { l:'设备条目', v: state.equipment.length + ' 项' },
     { l:'预计日均出餐', v: state.settings.expectedDailyOrders + ' 份' },
     { l:'营业天数', v: state.venue.businessDays + ' 天/月' }
   ].map(x => `<div class="item"><div class="l">${x.l}</div><div class="v">${x.v}</div></div>`).join('');
   renderIngredients(); renderStaff(); renderDishes(); renderEquipment();
+  renderOrderStats(); renderOrders(); drawOrderTrend(); drawOrderChannel();
   refreshComputed();
 }
 function populateFilters(){
@@ -1626,8 +1741,250 @@ function populateFilters(){
   document.getElementById('filterCat2').addEventListener('change', renderIngredients);
   document.getElementById('ingSearch').addEventListener('input', renderIngredients);
 }
+
+/* ================= 订单管理 ================= */
+let orderEditId = null;
+function todayStr2(){ return dateStr(new Date()); }
+function dateOffsetStr(days){
+  const d = new Date(); d.setDate(d.getDate() + days); return dateStr(d);
+}
+function nowTimeStr(){
+  const d = new Date();
+  return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+function orderPeriods(){
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth() + 1;
+  const dow = (now.getDay() + 6) % 7;
+  const monday = new Date(y, now.getMonth(), now.getDate() - dow);
+  const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6);
+  return {
+    today: todayStr2(),
+    yesterday: dateOffsetStr(-1),
+    monday: dateStr(monday),
+    sunday: dateStr(sunday),
+    month: y + '-' + pad2(m),
+    year: String(y) + '-'
+  };
+}
+function orderAgg(){
+  const p = orderPeriods();
+  const agg = { today:{n:0,amt:0}, yesterday:{n:0,amt:0}, week:{n:0,amt:0}, month:{n:0,amt:0}, year:{n:0,amt:0}, all:{n:0,amt:0} };
+  (state.orders || []).forEach(o => {
+    const d = o.date || '', amt = +o.amount || 0;
+    agg.all.n++; agg.all.amt += amt;
+    if(d === p.today){ agg.today.n++; agg.today.amt += amt; }
+    if(d === p.yesterday){ agg.yesterday.n++; agg.yesterday.amt += amt; }
+    if(d >= p.monday && d <= p.sunday){ agg.week.n++; agg.week.amt += amt; }
+    if(d.indexOf(p.month) === 0){ agg.month.n++; agg.month.amt += amt; }
+    if(d.indexOf(p.year) === 0){ agg.year.n++; agg.year.amt += amt; }
+  });
+  return agg;
+}
+function renderOrderStats(){
+  const a = orderAgg();
+  setText('ord-today', money0(a.today.amt));
+  setText('ord-today-sub', '今日 ' + a.today.n + ' 单 · 客单价 ' + money0(a.today.n ? a.today.amt/a.today.n : 0));
+  setText('ord-yesterday', money0(a.yesterday.amt));
+  setText('ord-yesterday-sub', '昨日 ' + a.yesterday.n + ' 单');
+  setText('ord-week', money0(a.week.amt));
+  setText('ord-week-sub', '本周 ' + a.week.n + ' 单');
+  setText('ord-month', money0(a.month.amt));
+  setText('ord-month-sub', '本月 ' + a.month.n + ' 单 · 日均收入 ' + money0(a.month.amt / new Date().getDate()));
+  setText('ord-year', money0(a.year.amt));
+  setText('ord-year-sub', '本年 ' + a.year.n + ' 单');
+  setText('ord-total', money0(a.all.amt));
+  setText('ord-total-sub', '累计 ' + a.all.n + ' 单 · 客单价 ' + money0(a.all.n ? a.all.amt/a.all.n : 0));
+}
+function filteredOrders(){
+  const from = document.getElementById('ord-from').value || '0000-00-00';
+  const to = document.getElementById('ord-to').value || '9999-12-31';
+  const ch = document.getElementById('ord-filterChannel').value;
+  return (state.orders || []).filter(o => {
+    const d = o.date || '';
+    if(d < from || d > to) return false;
+    if(ch && (o.channel || '') !== ch) return false;
+    return true;
+  }).sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.time||'').localeCompare(a.time||''));
+}
+function renderOrders(){
+  const list = filteredOrders();
+  const total = list.reduce((s,o) => s + (+o.amount||0), 0);
+  setText('ord-filter-sum', '筛选结果：' + list.length + ' 单 · 合计 ' + money0(total));
+  const body = document.getElementById('ordBody');
+  body.innerHTML = list.length
+    ? list.map(o => `<tr>
+        <td>${esc(o.date || '')}</td>
+        <td>${esc(o.time || '')}</td>
+        <td>${esc(o.channel || '')}</td>
+        <td class="num pos">${money(+o.amount||0)}</td>
+        <td class="num">${+o.qty||1}</td>
+        <td>${esc(o.note || '')}</td>
+        <td>
+          <button class="btn icon" onclick="editOrder('${o.id}')" title="编辑">✏️</button>
+          <button class="btn icon danger" onclick="delOrder('${o.id}')" title="删除">✕</button>
+        </td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" class="muted">暂无订单，用左侧表单添加一笔试试（默认日期就是今天）。</td></tr>';
+}
+function initOrderForm(){
+  document.getElementById('ord-date').value = todayStr2();
+  document.getElementById('ord-time').value = nowTimeStr();
+  document.getElementById('ord-amount').value = '';
+  document.getElementById('ord-qty').value = '1';
+  document.getElementById('ord-note').value = '';
+  orderEditId = null;
+  setText('ord-form-status', '');
+}
+function clearOrderForm(){ initOrderForm(); }
+function saveOrder(){
+  const date = document.getElementById('ord-date').value;
+  const time = document.getElementById('ord-time').value;
+  const channel = document.getElementById('ord-channel').value;
+  const amount = parseFloat(document.getElementById('ord-amount').value);
+  const qty = parseInt(document.getElementById('ord-qty').value, 10) || 1;
+  const note = document.getElementById('ord-note').value.trim();
+  if(!date){ setText('ord-form-status','⚠️ 请选择日期。'); return; }
+  if(!(amount > 0)){ setText('ord-form-status','⚠️ 请填写大于 0 的订单金额。'); return; }
+  if(orderEditId){
+    const o = (state.orders || []).find(x => x.id === orderEditId);
+    if(o){ o.date = date; o.time = time; o.channel = channel; o.amount = amount; o.qty = qty; o.note = note; }
+  } else {
+    (state.orders || (state.orders = [])).push({ id:uid('o'), date, time, channel, amount, qty, note });
+  }
+  markDataChanged(); save(); renderAll();
+  scheduleSync();
+  initOrderForm();
+  setText('ord-form-status', '✅ 订单已保存，并已自动同步到云端。');
+}
+function editOrder(id){
+  const o = (state.orders || []).find(x => x.id === id);
+  if(!o) return;
+  orderEditId = id;
+  document.getElementById('ord-date').value = o.date || todayStr2();
+  document.getElementById('ord-time').value = o.time || nowTimeStr();
+  document.getElementById('ord-channel').value = o.channel || '堂食';
+  document.getElementById('ord-amount').value = o.amount != null ? o.amount : '';
+  document.getElementById('ord-qty').value = o.qty || 1;
+  document.getElementById('ord-note').value = o.note || '';
+  setText('ord-form-status', '✏️ 正在编辑 ' + (o.date||'') + ' ' + (o.time||'') + ' 的订单，改完点「保存订单」。');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function delOrder(id){
+  const o = (state.orders || []).find(x => x.id === id);
+  if(!o) return;
+  if(!confirm('确定删除 ' + (o.date||'') + ' ' + (o.time||'') + ' 金额 ' + money(o.amount) + ' 的这笔订单？')) return;
+  state.orders = (state.orders || []).filter(x => x.id !== id);
+  markDataChanged(); save(); renderAll(); scheduleSync();
+  if(orderEditId === id) initOrderForm();
+}
+function addSampleOrders(days){
+  days = +days || 7;
+  const orders = state.orders || (state.orders = []);
+  const base = orders.length;
+  for(let d = days - 1; d >= 0; d--){
+    const dt = new Date(); dt.setDate(dt.getDate() - d);
+    const ds = dateStr(dt);
+    const n = d === 0 ? 4 : 3;
+    for(let i = 0; i < n; i++){
+      const hh = 10 + ((i * 3 + d) % 10);
+      const mm = (i * 17 + d * 7) % 60;
+      const amt = Math.round((38 + ((d * 7 + i * 13) % 90) + ((d + i) % 3) * 12) * 100) / 100;
+      orders.push({ id: uid('o'), date: ds, time: pad2(hh) + ':' + pad2(mm), channel: ORDER_CHANNELS[i % ORDER_CHANNELS.length], amount: amt, qty: 1 + (i % 2), note: d % 5 === 0 ? '示例订单' : '' });
+    }
+  }
+  markDataChanged(); save(); renderAll(); scheduleSync();
+  setText('ord-form-status', '✅ 已补录近 ' + days + ' 天示例订单（' + (orders.length - base) + ' 笔）。');
+}
+function drawOrderTrend(){
+  const canvas = document.getElementById('ordTrend');
+  if(!canvas || canvas.clientWidth < 10) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth, H = 220;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  const days = [], sums = [];
+  for(let i = 29; i >= 0; i--){
+    const ds = dateOffsetStr(-i);
+    days.push(ds);
+    sums.push((state.orders || []).filter(o => (o.date||'') === ds).reduce((s,o) => s + (+o.amount||0), 0));
+  }
+  const max = Math.max.apply(null, sums.concat([1]));
+  const pad = 30, bottom = H - 26, top = 16;
+  const bw = (W - pad - 8) / 30;
+  ctx.fillStyle = '#0f766e';
+  sums.forEach((v,i) => {
+    const h = (v / max) * (bottom - top);
+    const x = pad + i * bw + 2;
+    ctx.fillRect(x, bottom - h, Math.max(2, bw - 4), h);
+    if(v > 0 && h > 16){
+      ctx.fillStyle = '#334155'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(Math.round(v), x + bw/2, bottom - h - 4);
+      ctx.fillStyle = '#0f766e';
+    }
+  });
+  ctx.fillStyle = '#64748b'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText(days[0].slice(5), pad + 8, H - 8);
+  ctx.fillText(days[14].slice(5), pad + 14 * bw + bw/2, H - 8);
+  ctx.fillText(days[29].slice(5), pad + 29 * bw + bw/2, H - 8);
+  ctx.fillStyle = '#64748b'; ctx.textAlign = 'left';
+  ctx.fillText('近 30 天每日收入（元）', pad, 12);
+}
+function drawOrderChannel(){
+  const canvas = document.getElementById('ordChannel');
+  if(!canvas || canvas.clientWidth < 10) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth, H = 200;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  const p = orderPeriods();
+  const map = {};
+  (state.orders || []).forEach(o => {
+    if((o.date||'').indexOf(p.month) === 0){
+      const ch = o.channel || '其他';
+      map[ch] = (map[ch] || 0) + (+o.amount||0);
+    }
+  });
+  const entries = Object.keys(map).map(k => ({ k, v: map[k] })).filter(e => e.v > 0);
+  const total = entries.reduce((s,e) => s + e.v, 0);
+  const legend = document.getElementById('ordChannelLegend');
+  if(!total){
+    legend.innerHTML = '<span class="muted">本月暂无订单。</span>';
+    ctx.fillStyle = '#94a3b8'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('暂无数据', W/2, H/2);
+    return;
+  }
+  const colors = ['#0f766e','#f59e0b','#3b82f6','#ef4444','#8b5cf6'];
+  const cx = W/2, cy = H/2, R = Math.min(W,H)/2 - 12, r = R * 0.55;
+  let a = -Math.PI/2;
+  entries.forEach((e,i) => {
+    const ang = e.v / total * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,a,a+ang); ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length]; ctx.fill();
+    a += ang;
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.fillStyle = '#0f766e'; ctx.font = '700 14px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('本月', cx, cy - 3);
+  ctx.font = '600 12px sans-serif'; ctx.fillStyle = '#64748b';
+  ctx.fillText(money0(total), cx, cy + 14);
+  legend.innerHTML = entries.map((e,i) =>
+    `<span class="item"><span class="dot" style="background:${colors[i % colors.length]}"></span>${e.k} ${money0(e.v)}（${pct1(e.v/total)}）</span>`).join('');
+}
+function resetOrderFilter(){
+  const p = orderPeriods();
+  document.getElementById('ord-from').value = p.month + '-01';
+  document.getElementById('ord-to').value = todayStr2();
+  document.getElementById('ord-filterChannel').value = '';
+  renderOrders();
+}
+
 function init(){
   populateFilters();
+  initOrderForm();
   document.getElementById('syncMode').addEventListener('change', toggleSyncMode);
   ['syncUrl','syncToken','syncRepo','syncPath','syncBranch'].forEach(id => document.getElementById(id).addEventListener('input', writeSyncCfg));
   document.getElementById('syncAuto').addEventListener('change', writeSyncCfg);
@@ -1638,6 +1995,7 @@ function init(){
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + btn.dataset.tab));
       if(btn.dataset.tab === 'dashboard'){ updateDashboard(); drawPie(); }
+      if(btn.dataset.tab === 'orders'){ renderOrderStats(); renderOrders(); drawOrderTrend(); drawOrderChannel(); }
       if(history.replaceState) history.replaceState(null, '', '#' + btn.dataset.tab);
     });
   });
@@ -1646,7 +2004,7 @@ function init(){
     const btn = document.querySelector('.tab-btn[data-tab="' + hash + '"]');
     if(btn) btn.click();
   }
-  window.addEventListener('resize', debounce(drawPie, 200));
+  window.addEventListener('resize', debounce(() => { drawPie(); drawOrderTrend(); drawOrderChannel(); }, 200));
   renderAll();
   setTimeout(() => { if(state.settings.syncAuto && state.settings.syncUrl) initialSync(); }, 600);
 }
