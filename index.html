@@ -407,7 +407,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
         <div id="syncGithubBlock" class="form-grid" style="grid-column:span 2;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
           <div class="field" style="grid-column:span 2">
             <label>GitHub 仓库（用户名/仓库名）</label>
-            <input id="syncRepo" placeholder="如 xt4nrjppw4-netizen/buycai-data">
+            <input id="syncRepo" value="xt4nrjppw4-netizen/buycai-data">
           </div>
           <div class="field">
             <label>数据文件路径</label>
@@ -654,7 +654,7 @@ const DEFAULT_STATE = {
     EQ('e9','电饭煲','加工',2,600,4),
     EQ('e10','排烟风机','其他',1,3500,5)
   ],
-  settings: { expectedDailyOrders:300, initialStockBudget:5000, syncMode:'github', syncUrl:'', syncToken:'', syncRepo:'', syncPath:'data.json', syncBranch:'main', syncAuto:false }
+  settings: { expectedDailyOrders:300, initialStockBudget:5000, syncMode:'github', syncUrl:'', syncToken:'', syncRepo:'xt4nrjppw4-netizen/buycai-data', syncPath:'data.json', syncBranch:'main', syncAuto:false }
 };
 
 /* ================= 状态管理 ================= */
@@ -1456,12 +1456,14 @@ async function initialSync(){
         return;
       }
       const theirs = remote.updatedAt || '', mine = state.updatedAt || '';
-      if(theirs > mine){
+      if(theirs && (!mine || theirs > mine)){
         adoptRemote(remote);
-        setSyncStatus('✅ 已自动拉取云端最新数据。');
-      } else {
+        setSyncStatus('✅ 已自动拉取云端最新数据（云端更新于 ' + new Date(theirs).toLocaleString() + '）。');
+      } else if(mine && mine > theirs){
         await syncUpload();
-        setSyncStatus('✅ 本地数据最新，已自动上传。');
+        setSyncStatus('✅ 本地数据比云端新，已自动上传。');
+      } else {
+        setSyncStatus('✅ 云端与本地数据一致，无需同步。');
       }
     }catch(err){
       setSyncStatus('⚠️ 自动同步暂不可用（' + err.message + '），当前使用本地数据，联网后重试即可。');
@@ -1477,12 +1479,14 @@ async function initialSync(){
     }
     const remote = await res.json();
     const theirs = remote.updatedAt || '', mine = state.updatedAt || '';
-    if(theirs > mine){
+    if(theirs && (!mine || theirs > mine)){
       adoptRemote(remote);
-      setSyncStatus('✅ 已自动拉取云端最新数据。');
-    } else {
+      setSyncStatus('✅ 已自动拉取云端最新数据（云端更新于 ' + new Date(theirs).toLocaleString() + '）。');
+    } else if(mine && mine > theirs){
       await syncUpload();
-      setSyncStatus('✅ 本地数据最新，已自动上传。');
+      setSyncStatus('✅ 本地数据比云端新，已自动上传。');
+    } else {
+      setSyncStatus('✅ 云端与本地数据一致，无需同步。');
     }
   }catch(err){
     setSyncStatus('⚠️ 自动同步暂不可用（' + err.message + '），当前使用本地数据，联网后重试即可。');
