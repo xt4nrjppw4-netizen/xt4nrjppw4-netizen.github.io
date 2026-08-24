@@ -400,7 +400,8 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
         </div>
         <div class="toolbar" style="margin-top:8px">
           <button class="btn ghost" onclick="addSampleOrders(7)">＋ 补录近 7 天示例订单</button>
-          <span class="muted">清空订单后可用来快速生成测试数据</span>
+          <button class="btn ghost" onclick="clearAllOrders()">🗑️ 清空全部订单</button>
+          <span class="muted">示例数据可直接删除，然后开始记真实流水</span>
         </div>
       </div>
       <div class="card">
@@ -1876,6 +1877,13 @@ function delOrder(id){
   state.orders = (state.orders || []).filter(x => x.id !== id);
   markDataChanged(); save(); renderAll(); scheduleSync();
   if(orderEditId === id) initOrderForm();
+}
+function clearAllOrders(){
+  if(!confirm('确定清空全部 ' + (state.orders || []).length + ' 笔订单？此操作不可恢复，建议先导出备份。')) return;
+  state.orders = [];
+  markDataChanged(); save(); renderAll(); scheduleSync();
+  initOrderForm();
+  setText('ord-form-status', '✅ 已清空全部订单。');
 }
 function addSampleOrders(days){
   days = +days || 7;
