@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>买菜成本联动计算器</title>
+<style>
+:root{
+  --bg:#eef2f5; --card:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e2e8f0;
+  --brand:#0f766e; --brand2:#14b8a6; --amber:#d97706; --red:#dc2626; --green:#16a34a; --blue:#2563eb; --purple:#8b5cf6;
+  --shadow:0 1px 3px rgba(15,23,42,.08),0 4px 14px rgba(15,23,42,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55}
+.topbar{background:linear-gradient(135deg,#134e4a,#0f766e 55%,#14b8a6);color:#fff;padding:18px 22px 0;box-shadow:0 2px 10px rgba(15,23,42,.15)}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.brand h1{margin:0;font-size:22px;letter-spacing:.5px}
+.brand .tag{font-size:12px;opacity:.85}
+nav.tabs{display:flex;gap:4px;margin-top:14px;overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+.tab-btn{border:0;background:transparent;color:#cffafe;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;font-size:14px;white-space:nowrap;opacity:.85}
+.tab-btn:hover{background:rgba(255,255,255,.12);opacity:1}
+.tab-btn.active{background:#fff;color:#0f766e;font-weight:700;opacity:1}
+main{max-width:1320px;margin:0 auto;padding:20px 18px 60px}
+.tab{display:none}
+.tab.active{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)}
+.card h2{margin:0 0 12px;font-size:16px;color:#134e4a}
+.card h3{margin:0 0 10px;font-size:14px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.kpi .label{font-size:12px;color:var(--muted)}
+.kpi .value{font-size:22px;font-weight:700;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.kpi .sub{font-size:11px;color:var(--muted)}
+.kpi .value.good{color:var(--green)} .kpi .value.bad{color:var(--red)} .kpi .value.accent{color:var(--brand)}
+.grid-2{display:grid;grid-template-columns:1.05fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12px;color:var(--muted)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+input,select{font:inherit;color:inherit;background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:7px 9px;min-width:0;outline:none;transition:border .12s, box-shadow .12s}
+input:focus,select:focus{border-color:var(--brand2);box-shadow:0 0 0 3px rgba(20,184,166,.15)}
+input.c{width:100%;min-width:90px}
+input.s{width:100%;min-width:70px}
+input.n{width:100%;min-width:70px;text-align:right}
+input.d{width:100%;min-width:112px}
+select.c{width:100%;min-width:112px}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table.data{width:100%;border-collapse:collapse;min-width:980px}
+table.data th{background:#f8fafc;color:#475569;font-size:12px;font-weight:600;padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+table.data td{padding:7px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle;white-space:nowrap}
+table.data tr:last-child td{border-bottom:0}
+table.data tr:hover{background:#fafcfc}
+.ing-grid{display:flex;flex-direction:column}
+.ing-head,.ing-row{display:grid;grid-template-columns:1.3fr 1.05fr 1.05fr 60px 74px 62px 62px 88px 1.1fr 104px 64px 64px 38px;gap:8px;align-items:center;padding:8px 12px}
+.ing-head{background:#f8fafc;color:#475569;font-size:12px;font-weight:600;border-bottom:1px solid var(--line);border-radius:10px 10px 0 0}
+.ing-row{border-bottom:1px solid #f1f5f9}
+.ing-row:hover{background:#fafcfc}
+.ing-row:last-child{border-bottom:0}
+.ing-row .net{font-weight:700;color:#0f766e;font-variant-numeric:tabular-nums}
+td.calc,td.num{font-variant-numeric:tabular-nums}
+.btn{border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:600;transition:filter .12s, transform .06s}
+.btn:hover{filter:brightness(1.06)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--brand);color:#fff}
+.btn.ghost{background:#fff;border:1px solid #cbd5e1;color:#334155}
+.btn.danger{background:#fee2e2;color:#b91c1c}
+.btn.icon{padding:5px 8px;font-size:12px;border-radius:6px}
+.chip{display:inline-block;padding:3px 9px;border-radius:999px;background:#f1f5f9;color:#334155;font-size:12px;font-weight:600;white-space:nowrap}
+.chip.good{background:#dcfce7;color:#15803d}
+.chip.bad{background:#fee2e2;color:#b91c1c}
+.chip.warn{background:#fef3c7;color:#b45309}
+.chip.brand{background:#ccfbf1;color:#0f766e}
+.muted{color:var(--muted);font-size:12px}
+.pos{color:var(--green);font-weight:600}
+.neg{color:var(--red);font-weight:600}
+.stat{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px dashed var(--line)}
+.stat:last-child{border-bottom:0}
+.stat .big{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .big.accent{color:var(--brand)}
+.stat label{color:var(--muted);font-size:12px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px}
+.legend .item{display:flex;align-items:center;gap:6px;font-size:12px;color:#475569}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.rank-bar{width:120px;height:8px;background:#f1f5f9;border-radius:99px;overflow:hidden;display:inline-block;vertical-align:middle;margin-right:8px}
+.rank-bar i{display:block;height:100%;background:linear-gradient(90deg,#14b8a6,#0d9488);border-radius:99px}
+.dish-head{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.dish-head .dish-fields{display:flex;gap:8px;flex-wrap:wrap;flex:1 1 420px}
+.dish-head .dish-fields .field{flex:1 1 110px}
+.dish-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 320px;align-items:center}
+.bom-box{margin-top:12px;border-top:1px dashed var(--line);padding-top:12px}
+.row-actions{display:flex;gap:6px}
+.mode-switch{display:flex;gap:18px;margin-bottom:14px;flex-wrap:wrap}
+.mode-switch label{display:flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid var(--line);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+.mode-switch label:has(input:checked){border-color:var(--brand2);background:#f0fdfa;color:#0f766e}
+.breakdown{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.breakdown .item{background:#f8fafc;border-radius:10px;padding:10px 12px}
+.breakdown .item .l{font-size:12px;color:var(--muted)}
+.breakdown .item .v{font-size:16px;font-weight:700}
+ol.steps li{margin-bottom:8px}
+footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
+#pie{width:100%;height:300px;display:block}
+.hidden{display:none}
+.badge{display:inline-block;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:6px}
+.note{background:#f0fdfa;border:1px solid #99f6e4;color:#115e59;border-radius:10px;padding:10px 14px;font-size:12px;margin-bottom:12px}
+@media(max-width:900px){
+  .grid-2{grid-template-columns:1fr}
+  .dish-head .dish-fields{flex:1 1 100%}
+  .kpi .value{font-size:19px}
+}
+@media(max-width:1100px){
+  .ing-head{display:none}
+  .ing-row{grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px 8px;padding:12px;border-bottom:1px solid var(--line)}
+  .ing-row .cell{display:flex;flex-direction:column;gap:3px}
+  .ing-row .cell::before{content:attr(data-label);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ing-row .cell:not([data-label])::before{content:none}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <h1>🛒 买菜成本联动计算器</h1>
+    <span class="tag">采购 → 场地 → 人力 → 配送 → 定价，全链路实时联动</span>
+  </div>
+  <nav class="tabs" id="tabNav">
+    <button class="tab-btn active" data-tab="dashboard">📊 综合看板</button>
+    <button class="tab-btn" data-tab="ingredients">🐟 食材采购</button>
+    <button class="tab-btn" data-tab="venue">🏠 场地成本</button>
+    <button class="tab-btn" data-tab="staff">👥 人力成本</button>
+    <button class="tab-btn" data-tab="delivery">🛵 配送成本</button>
+    <button class="tab-btn" data-tab="dishes">🍽️ 菜品定价</button>
+    <button class="tab-btn" data-tab="equipment">🍳 厨房设备</button>
+    <button class="tab-btn" data-tab="data">💾 数据管理</button>
+    <button class="tab-btn" data-tab="help">📖 使用说明</button>
+  </nav>
+</div>
+
+<main>
+  <!-- ============ 综合看板 ============ -->
+  <section id="tab-dashboard" class="tab active">
+    <div class="kpi-grid">
+      <div class="card kpi">
+        <div class="label">💰 总投入</div>
+        <div class="value accent" id="kpi-invest">¥0</div>
+        <div class="sub" id="kpi-invest-sub">设备 + 装修 + 首批食材</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">📌 月固定成本</div>
+        <div class="value" id="kpi-fixed">¥0</div>
+        <div class="sub" id="kpi-fixed-sub">场地 + 人力 + 折旧</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">⚖️ 盈亏平衡点（日营业额）</div>
+        <div class="value" id="kpi-breakeven">¥0</div>
+        <div class="sub" id="kpi-breakeven-sub">综合毛利率 × 营业天数</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">📈 预计月营业额</div>
+        <div class="value" id="kpi-revenue">¥0</div>
+        <div class="sub" id="kpi-revenue-sub">按预估销量计算</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">🏦 预计月利润</div>
+        <div class="value" id="kpi-profit">¥0</div>
+        <div class="sub" id="kpi-profit-sub">月净利率</div>
+      </div>
+      <div class="card kpi">
+        <div class="label">🎯 预计月净利率</div>
+        <div class="value" id="kpi-netrate">0%</div>
+        <div class="sub" id="kpi-netrate-sub">利润 ÷ 营业额</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>📊 月成本结构饼图</h2>
+        <canvas id="pie"></canvas>
+        <div class="legend" id="pieLegend"></div>
+      </div>
+      <div class="card">
+        <h2>🏆 菜品毛利排行</h2>
+        <div class="table-wrap">
+          <table class="data" style="min-width:640px">
+            <thead><tr><th>排名</th><th>菜品</th><th>售价</th><th>食材成本</th><th>毛利额</th><th>毛利率</th></tr></thead>
+            <tbody id="rankBody"></tbody>
+          </table>
+        </div>
+        <p class="muted" id="rankNote"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧮 月经营构成明细</h2>
+      <div class="breakdown" id="costBreakdown"></div>
+    </div>
+  </section>
+
+  <!-- ============ 食材采购 ============ -->
+  <section id="tab-ingredients" class="tab">
+    <div class="card">
+      <h2>🐟 食材采购管理（三级分类）</h2>
+      <div class="toolbar">
+        <input id="ingSearch" placeholder="🔍 搜索名称 / 供应商" style="width:220px">
+        <select id="filterCat1"><option value="">全部一级分类</option></select>
+        <select id="filterCat2"><option value="">全部二级分类</option></select>
+        <button class="btn primary" onclick="addIngredient()">＋ 添加食材</button>
+        <span class="muted" id="ingCount"></span>
+      </div>
+      <div class="ing-grid">
+        <div class="ing-head">
+          <div>食材名称</div><div>一级分类</div><div>二级分类</div><div>单位</div>
+          <div>采购单价(元)</div><div>损耗率(%)</div><div>净料率(%)</div><div>净料成本(元/单位)</div>
+          <div>供应商</div><div>采购日期</div><div>保质期(天)</div><div>标准用量(每份)</div><div></div>
+        </div>
+        <div id="ingGrid"></div>
+      </div>
+      <p class="muted">净料成本 = 采购单价 ÷ 净料率；菜品食材成本 = Σ（食材净料成本 × 配方用量）。窗口较窄时字段自动换行显示，不会截断。</p>
+    </div>
+  </section>
+
+  <!-- ============ 场地成本 ============ -->
+  <section id="tab-venue" class="tab">
+    <div class="grid-2">
+      <div class="card">
+        <h2>🏪 板块一：商铺租金</h2>
+        <div class="form-grid">
+          <div class="field"><label>商铺面积（㎡）</label><input id="v-shopArea" type="number" min="0"></div>
+          <div class="field"><label>商铺月租金（元）</label><input id="v-shopRent" type="number" min="0"></div>
+          <div class="field"><label>商铺物业费（元/月）</label><input id="v-shopProperty" type="number" min="0"></div>
+          <div class="field"><label>商铺水电费（元/月）</label><input id="v-shopUtilities" type="number" min="0"></div>
+        </div>
+        <p class="muted">租赁商铺经营时填写；若为自有住房经营，本板块可留空或按实际分摊。</p>
+      </div>
+      <div class="card">
+        <h2>🏠 板块二：自我住房</h2>
+        <div class="form-grid">
+          <div class="field"><label>住房使用面积（㎡）</label><input id="v-homeArea" type="number" min="0"></div>
+          <div class="field"><label>住房月成本（元）</label><input id="v-homeCost" type="number" min="0"></div>
+          <div class="field"><label>住房物业费（元/月）</label><input id="v-homeProperty" type="number" min="0"></div>
+          <div class="field"><label>住房水电费（元/月）</label><input id="v-homeUtilities" type="number" min="0"></div>
+        </div>
+        <p class="muted">自有住房 / 家庭厨房经营时填写：住房月成本可按同地段市场租金或房贷月供折算；与商铺板块可按实际同时分摊。</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h2>🧾 公共费用</h2>
+        <div class="form-grid">
+          <div class="field"><label>其他固定费（网费/清洁等）</label><input id="v-otherFixed" type="number" min="0"></div>
+          <div class="field"><label>装修总投资（元）</label><input id="v-renovationTotal" type="number" min="0"></div>
+          <div class="field"><label>装修摊销月数（月）</label><input id="v-renovationMonths" type="number" min="1"></div>
+          <div class="field"><label>每月营业天数（天）</label><input id="v-businessDays" type="number" min="1"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>📈 场地成本计算</h2>
+        <div class="stat"><label>商铺板块月成本 = 租金 + 物业 + 水电</label><div class="big" id="v-shopTotal">¥0.00</div></div>
+        <div class="stat"><label>商铺板块每日成本 = 月成本 ÷ 营业天数</label><div class="big" id="v-shopDaily">¥0.00</div></div>
+        <div class="stat"><label>自我住房板块月成本 = 住房成本 + 物业 + 水电</label><div class="big" id="v-homeTotal">¥0.00</div></div>
+        <div class="stat"><label>自我住房板块每日成本</label><div class="big" id="v-homeDaily">¥0.00</div></div>
+        <div class="stat"><label>装修月折旧 = 装修总投资 ÷ 摊销月数</label><div class="big" id="v-renovDep">¥0.00</div></div>
+        <div class="stat"><label>厨房设备月折旧（自动汇总自「厨房设备」页）</label><div class="big" id="v-equipDep">¥0.00</div></div>
+        <div class="stat"><label>月场地总成本 = 两板块 + 装修折旧 + 其他</label><div class="big accent" id="v-monthly">¥0.00</div></div>
+        <div class="stat"><label>每日场地成本 = 月总成本 ÷ 营业天数</label><div class="big" id="v-daily">¥0.00</div></div>
+        <p class="muted">注：厨房设备折旧统一由「厨房设备」页签清单汇总，此处仅展示参考值，不计入每日场地成本，避免重复计算。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 人力成本 ============ -->
+  <section id="tab-staff" class="tab">
+    <div class="card">
+      <h2>👥 员工人力成本</h2>
+      <div class="toolbar">
+        <button class="btn primary" onclick="addStaff()">＋ 添加岗位</button>
+        <span class="muted">单人月成本 = 月薪 × (1 + 社保公积金比例) + 餐补 + 住宿补贴 + 其他福利</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data" style="min-width:960px">
+          <thead><tr>
+            <th>岗位</th><th>人数</th><th>月薪(元)</th><th>社保公积金比例(%)</th>
+            <th>餐补(元)</th><th>住宿补贴(元)</th><th>其他福利(元)</th><th>单人月成本</th><th>小计(元/月)</th><th></th>
+          </tr></thead>
+          <tbody id="staffBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📈 人力成本汇总</h2>
+      <div class="grid-3">
+        <div class="stat"><label>总人力月成本 = Σ 单人月成本 × 人数</label><div class="big accent" id="st-total">¥0.00</div></div>
+        <div class="stat"><label>每日人力成本 = 总人力月成本 ÷ 营业天数</label><div class="big" id="st-daily">¥0.00</div></div>
+        <div class="stat"><label>参与分摊（菜品页「分摊成本」）</label><div class="big" id="st-shared">¥0.00</div></div>
+      </div>
+      <p class="muted">分摊成本 =（每日场地成本 + 每日人力成本）÷ 预计日均出餐份数，请在「菜品定价」页设置日均出餐份数。</p>
+    </div>
+  </section>
+
+  <!-- ============ 配送成本 ============ -->
+  <section id="tab-delivery" class="tab">
+    <div class="card">
+      <h2>🛵 配送成本设置</h2>
+      <div class="mode-switch">
+        <label><input type="radio" name="deliveryMode" value="third" checked> 第三方平台</label>
+        <label><input type="radio" name="deliveryMode" value="self"> 自配送</label>
+      </div>
+      <div id="thirdPanel">
+        <div class="form-grid">
+          <div class="field"><label>平台名称</label><input id="del-platform" placeholder="如：美团 / 饿了么"></div>
+          <div class="field"><label>抽佣比例（%）</label><input id="del-commissionRate" type="number" min="0" step="0.1"></div>
+          <div class="field"><label>每单配送费（元）</label><input id="del-perOrderFee" type="number" min="0" step="0.1"></div>
+          <div class="field"><label>客单价预览（元）</label><input id="del-orderAmountPreview" type="number" min="0"></div>
+        </div>
+        <div class="grid-3" style="margin-top:14px">
+          <div class="stat"><label>每单配送成本 = 客单价 × 抽佣 + 配送费</label><div class="big accent" id="del3-cost">¥0.00</div></div>
+          <div class="stat"><label>月配送成本估算（按各菜品销量）</label><div class="big" id="del3-month">¥0.00</div></div>
+          <div class="stat"><label>计入菜品「配送成本」</label><div class="big" id="del3-note">按售价 × 抽佣 + 固定配送费</div></div>
+        </div>
+      </div>
+      <div id="selfPanel" class="hidden">
+        <div class="form-grid">
+          <div class="field"><label>配送员月人力成本（元）</label><input id="del-riderSalary" type="number" min="0"></div>
+          <div class="field"><label>包装材料费（元/单）</label><input id="del-packagingFee" type="number" min="0" step="0.1"></div>
+          <div class="field"><label>交通工具月折旧（元）</label><input id="del-vehicleDepreciation" type="number" min="0"></div>
+        </div>
+        <div class="grid-3" style="margin-top:14px">
+          <div class="stat"><label>每单配送成本 = 包装费 + 月固定 ÷ 月出餐量</label><div class="big accent" id="delSelf-cost">¥0.00</div></div>
+          <div class="stat"><label>月配送成本估算</label><div class="big" id="delSelf-month">¥0.00</div></div>
+          <div class="stat"><label>计入月固定成本</label><div class="big" id="delSelf-fixed">¥0.00</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 菜品定价 ============ -->
+  <section id="tab-dishes" class="tab">
+    <div class="card">
+      <h2>🍽️ 菜品定价与配方（BOM）</h2>
+      <div class="toolbar">
+        <div class="field" style="flex-direction:row;align-items:center;gap:8px">
+          <label style="white-space:nowrap">预计日均出餐份数</label>
+          <input id="setExpectedOrders" type="number" min="1" style="width:110px">
+        </div>
+        <button class="btn primary" onclick="addDish()">＋ 添加菜品</button>
+        <span class="muted" id="dishCount"></span>
+      </div>
+      <div class="note">分摊成本 =（每日场地成本 + 每日人力成本）÷ 预计日均出餐份数，按份数均摊固定成本；菜品总成本 = 食材成本 + 分摊成本 + 每单配送成本。低客单引流款（如米饭、豆浆）分摊后会呈现亏损属正常现象，可通过提价、提升出餐量或减少固定成本改善。</div>
+      <div id="dishList"></div>
+    </div>
+  </section>
+
+  <!-- ============ 厨房设备 ============ -->
+  <section id="tab-equipment" class="tab">
+    <div class="card">
+      <h2>🍳 厨房用具购入成本</h2>
+      <div class="toolbar">
+        <button class="btn primary" onclick="addEquipment()">＋ 添加设备</button>
+        <span class="muted">月折旧 = 总价 ÷（使用年限 × 12）</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data" style="min-width:760px">
+          <thead><tr>
+            <th>设备名称</th><th>分类</th><th>数量</th><th>单价(元)</th><th>总价</th><th>使用年限(年)</th><th>月折旧</th><th></th>
+          </tr></thead>
+          <tbody id="eqBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📈 一次性投入汇总</h2>
+      <div class="grid-3">
+        <div class="stat"><label>设备一次性投入总额</label><div class="big" id="eq-invest">¥0.00</div></div>
+        <div class="stat"><label>设备月度折旧总额</label><div class="big" id="eq-dep-total">¥0.00</div></div>
+        <div class="field"><label>首批食材预算（元）</label><input id="eqStockBudget" type="number" min="0"></div>
+        <div class="stat"><label>装修总投资（来自场地页）</label><div class="big" id="eq-renovation">¥0.00</div></div>
+        <div class="stat"><label>💰 总投入 = 设备 + 装修 + 首批食材</label><div class="big accent" id="eq-total-invest">¥0.00</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 数据管理 ============ -->
+  <section id="tab-data" class="tab">
+    <div class="card">
+      <h2>💾 数据管理</h2>
+      <p class="muted">所有数据自动保存在浏览器 localStorage 中，关闭页面后不丢失。跨电脑或清理浏览器前请先导出备份。</p>
+      <div class="toolbar">
+        <button class="btn primary" onclick="exportData()">⬇️ 导出 JSON 备份</button>
+        <label class="btn ghost" style="cursor:pointer">⬆️ 导入 JSON 文件<input id="importFile" type="file" accept=".json,application/json" style="display:none"></label>
+        <button class="btn ghost" onclick="resetSample()">♻️ 恢复示例数据</button>
+        <button class="btn danger" onclick="clearAll()">🗑 清空全部数据</button>
+      </div>
+      <p class="muted" id="dataStatus"></p>
+    </div>
+    <div class="card">
+      <h2>🔁 数据同步与本地文件</h2>
+      <div class="form-grid">
+        <div class="field" style="grid-column:span 2">
+          <label>同步地址（支持 GET / PUT 的 JSON 接口，免费方案见使用说明）</label>
+          <input id="syncUrl" placeholder="https://jsonblob.com/api/jsonBlob/xxxx 或自建接口">
+        </div>
+        <div class="field">
+          <label>访问令牌（可选，Bearer 认证）</label>
+          <input id="syncToken" type="password" placeholder="留空则无需认证">
+        </div>
+        <div class="field" style="justify-content:flex-end">
+          <label class="btn ghost" style="display:flex;align-items:center;gap:8px;cursor:pointer;width:100%;justify-content:center">
+            <input type="checkbox" id="syncAuto" style="width:auto;margin:0"> 自动同步（改后自动上传 / 打开时自动拉取）
+          </label>
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top:12px">
+        <button class="btn primary" onclick="syncUpload()">⬆️ 上传到云端</button>
+        <button class="btn ghost" onclick="syncDownload()">⬇️ 从云端下载</button>
+      </div>
+      <p class="muted" id="syncStatus">填写同步地址后可上传/下载；开启自动同步后，各设备数据自动保持一致。</p>
+      <hr style="border:0;border-top:1px dashed var(--line);margin:14px 0">
+      <h3>💻 本地文件（Chrome / Edge 支持，直接把数据保存成磁盘上的 JSON 文件）</h3>
+      <div class="toolbar">
+        <button class="btn ghost" onclick="chooseLocalFile()">📂 关联已有本地文件</button>
+        <button class="btn ghost" onclick="createLocalFile()">💾 新建本地数据文件</button>
+      </div>
+      <p class="muted" id="localFileStatus">未关联本地文件（数据现保存在浏览器 localStorage）</p>
+    </div>
+    <div class="card">
+      <h2>📦 当前数据规模</h2>
+      <div class="grid-3" id="dataStats"></div>
+    </div>
+  </section>
+
+  <!-- ============ 使用说明 ============ -->
+  <section id="tab-help" class="tab">
+    <div class="card">
+      <h2>🚀 快速上手（7 步）</h2>
+      <ol class="steps">
+        <li><b>录入食材库</b>：在「食材采购」页添加食材，填写分类、采购单价、损耗率、净料率等；净料成本自动算出。</li>
+        <li><b>录入场地成本</b>：在「场地成本」页填写租金、物业、水电、装修摊销与营业天数。</li>
+        <li><b>录入人力成本</b>：在「人力成本」页按岗位添加人数、月薪、社保公积金比例与各项补贴。</li>
+        <li><b>录入厨房设备</b>：在「厨房设备」页添加设备清单，自动汇总一次性投入与月折旧。</li>
+        <li><b>设置配送方式</b>：在「配送成本」页选择第三方平台或自配送，填写抽佣、配送费等参数。</li>
+        <li><b>创建菜品配方</b>：在「菜品定价」页添加菜品，设置售价与预估日销量，展开「配方」从食材库选择食材并填写每份用量，食材成本自动联动。</li>
+        <li><b>查看综合看板</b>：切回「综合看板」查看总投入、月固定成本、盈亏平衡点、预计月利润、成本结构饼图与菜品毛利排行。</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>🧮 计算公式一览</h2>
+      <table class="data formula-table" style="min-width:640px">
+        <thead><tr><th>指标</th><th>公式</th></tr></thead>
+        <tbody>
+          <tr><td>净料成本</td><td>采购单价 ÷ 净料率</td></tr>
+          <tr><td>菜品食材成本</td><td>Σ（食材净料成本 × 配方用量）</td></tr>
+          <tr><td>装修月折旧</td><td>装修总投资 ÷ 摊销月数</td></tr>
+          <tr><td>月场地成本</td><td>商铺板块（租金+物业+水电）+ 自我住房板块（住房成本+物业+水电）+ 装修月折旧 + 其他固定费用</td></tr>
+          <tr><td>每日场地成本</td><td>月场地成本 ÷ 营业天数</td></tr>
+          <tr><td>单人月成本</td><td>月薪 × (1 + 社保公积金比例) + 餐补 + 住宿补贴 + 其他福利</td></tr>
+          <tr><td>每日人力成本</td><td>Σ（单人月成本 × 人数）÷ 营业天数</td></tr>
+          <tr><td>每单配送成本（第三方）</td><td>订单金额 × 抽佣比例 + 每单配送费</td></tr>
+          <tr><td>每单配送成本（自配送）</td><td>包装材料费 +（配送员月成本 + 交通工具月折旧）÷ 月出餐总量</td></tr>
+          <tr><td>分摊成本</td><td>（每日场地成本 + 每日人力成本）÷ 预计日均出餐份数</td></tr>
+          <tr><td>菜品总成本</td><td>食材成本 + 分摊成本 + 每单配送成本</td></tr>
+          <tr><td>毛利率</td><td>（售价 − 食材成本）÷ 售价</td></tr>
+          <tr><td>净利率</td><td>（售价 − 菜品总成本）÷ 售价</td></tr>
+          <tr><td>设备月折旧</td><td>设备总价 ÷（使用年限 × 12）</td></tr>
+          <tr><td>月固定成本</td><td>月场地成本 + 月人力成本 + 设备月折旧总额（自配送时另计配送员与车辆折旧）</td></tr>
+          <tr><td>盈亏平衡日营业额</td><td>月固定成本 ÷ 综合毛利率 ÷ 营业天数</td></tr>
+          <tr><td>预计月利润</td><td>Σ（售价 − 菜品总成本）× 预估日销量 × 营业天数</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>❓ 常见问题</h2>
+      <p><b>数据保存在哪里？</b> 保存在当前浏览器的 localStorage。更换浏览器或电脑前，请在「数据管理」页导出 JSON 备份，换环境后导入即可。</p>
+      <p><b>怎么在手机上 / 另一台电脑上继续用？</b> 分两步：① 把本 HTML 文件部署到免费静态托管（GitHub Pages、Netlify Drop、Vercel 均可直接拖入发布），手机浏览器打开网址即可使用；② 在「数据管理 → 数据同步」填写同一个同步地址并开启自动同步，各设备修改后自动互通，断网时仍用本地数据、联网后自动对齐。</p>
+      <p><b>同步地址从哪里来？</b> 免费方案：① jsonblob.com——用浏览器打开后创建一个 Blob，把返回的 <code>https://jsonblob.com/api/jsonBlob/xxxx</code> 地址填进来即可（注意保密，拿到地址的人可读写）；② npoint.io——创建 Bin 后使用其写入地址；③ 有服务器的话，任何支持 GET / PUT 返回 JSON 的接口都行。同步地址会保存在浏览器本地，不会自动发给第三方。</p>
+      <p><b>想直接改磁盘上的文件怎么办？</b> 用 Chrome / Edge 打开页面，在「数据管理 → 本地文件」点击「关联已有本地文件」或「新建本地数据文件」，之后每次修改都会自动写入该 JSON 文件；该文件可随时复制、备份或传到其他设备。</p>
+      <p><b>为什么米饭、豆浆等低价菜品净利为负？</b> 分摊成本按「出餐份数」均摊全部固定成本，低客单引流款会被摊高成本。这是该口径下的真实结果，可通过调价、提升出餐量或改按售价比例分摊来调整经营策略。</p>
+      <p><b>修改食材单价后菜品成本会变吗？</b> 会。所有输入实时联动：改单价、净料率、用量、固定成本、配送参数，菜品成本、毛利、看板全部自动刷新。</p>
+      <p><b>如何重新开始？</b> 「数据管理」页可一键恢复示例数据或清空全部数据。</p>
+    </div>
+  </section>
+</main>
+
+<footer>买菜成本联动计算器 · 数据自动保存于浏览器本地 · 建议使用 Chrome / Edge 最新版</footer>
+
+<script>
+'use strict';
+
+/* ================= 基础工具 ================= */
+const STORE_KEY = 'buycai_cost_calculator_v1';
+function uid(p){ return p + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function num(el){ const v = parseFloat(el.value); return isNaN(v) ? 0 : v; }
+function money(v){ return '¥' + (isFinite(v)? v : 0).toLocaleString('zh-CN',{minimumFractionDigits:2, maximumFractionDigits:2}); }
+function money0(v){ return '¥' + Math.round(isFinite(v)? v : 0).toLocaleString('zh-CN'); }
+function pct1(v){ return ((v||0)*100).toFixed(1) + '%'; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function setText(id, txt){ const el = document.getElementById(id); if(el) el.textContent = txt; }
+function debounce(fn, ms){ let t; return function(){ clearTimeout(t); t = setTimeout(fn, ms); }; }
+
+/* ================= 分类字典 ================= */
+const CATS = {
+  '水产类':['鱼类','虾类','贝类','蟹类'],
+  '蔬菜类':['叶菜类','根茎类','茄果类','菌菇类'],
+  '肉类':['猪肉','牛肉','羊肉','禽肉'],
+  '豆制品类':['豆腐','豆皮','豆干','其他'],
+  '米面粮油类':['大米','面粉','食用油','其他'],
+  '调料类':['基础调料','香辛料','酱料','其他'],
+  '干货类':['菌菇干货','海味干货','豆类','其他'],
+  '蛋奶类':['蛋类','奶类','其他']
+};
+const POSITIONS = ['店长','厨师','切配','服务员','收银员','杂工','其他'];
+const EQUIP_CATS = ['灶具','制冷','加工','储物','餐具','其他'];
+const DISH_CATS = ['热菜','凉菜','汤品','主食','饮品'];
+
+/* ================= 示例数据 ================= */
+const ING = (id,name,cat1,cat2,unit,price,loss,net,supplier,date,shelf,usage) =>
+  ({id,name,cat1,cat2,unit,price,lossRate:loss,netRate:net,supplier,purchaseDate:date,shelfLife:shelf,usage});
+const BOM = (ingId,usage) => ({ingId,usage});
+const DISH = (id,name,category,price,sales,bom) => ({id,name,category,price,sales,bom});
+const STAFF = (position,count,salary,social,meal,housing,other) =>
+  ({id:uid('s'),position,count,salary,socialRate:social,meal,housing,other});
+const EQ = (id,name,category,qty,unitPrice,years) => ({id,name,category,qty,unitPrice,years});
+
+const SAMPLE_INGREDIENTS = [
+  ING('i1','草鱼','水产类','鱼类','斤',9,28,72,'海鲜市场老王','2026-08-20',3,1.2),
+  ING('i2','鲈鱼','水产类','鱼类','斤',16,22,78,'海鲜市场老王','2026-08-21',2,0.7),
+  ING('i3','鲫鱼','水产类','鱼类','斤',10,30,70,'海鲜市场老王','2026-08-21',2,0.6),
+  ING('i4','黑鱼','水产类','鱼类','斤',13,25,75,'海鲜市场老王','2026-08-20',3,0.9),
+  ING('i5','三文鱼','水产类','鱼类','公斤',95,10,90,'冷链直供','2026-08-22',5,0.2),
+  ING('i6','基围虾','水产类','虾类','斤',32,18,82,'海鲜市场老王','2026-08-22',2,0.4),
+  ING('i7','花蛤','水产类','贝类','斤',8,35,65,'海鲜市场老王','2026-08-23',1,1),
+  ING('i8','大闸蟹','水产类','蟹类','个',18,15,85,'阳澄湖直供','2026-08-23',4,2),
+  ING('i9','青菜','蔬菜类','叶菜类','斤',3,15,85,'城东蔬菜批发','2026-08-24',2,0.4),
+  ING('i10','菠菜','蔬菜类','叶菜类','斤',4.5,18,82,'城东蔬菜批发','2026-08-24',2,0.4),
+  ING('i11','生菜','蔬菜类','叶菜类','斤',3.5,20,80,'城东蔬菜批发','2026-08-24',2,0.3),
+  ING('i12','油麦菜','蔬菜类','叶菜类','斤',4,18,82,'城东蔬菜批发','2026-08-24',2,0.35),
+  ING('i13','小葱','蔬菜类','叶菜类','斤',5,10,90,'城东蔬菜批发','2026-08-24',2,0.05),
+  ING('i14','黄豆芽','蔬菜类','叶菜类','斤',2.5,5,100,'城东蔬菜批发','2026-08-24',2,0.5),
+  ING('i15','土豆','蔬菜类','根茎类','斤',2.5,10,90,'城东蔬菜批发','2026-08-23',15,0.5),
+  ING('i16','胡萝卜','蔬菜类','根茎类','斤',2.8,8,92,'城东蔬菜批发','2026-08-23',15,0.2),
+  ING('i17','白萝卜','蔬菜类','根茎类','斤',2,10,90,'城东蔬菜批发','2026-08-23',10,0.4),
+  ING('i18','红薯','蔬菜类','根茎类','斤',3,5,95,'城东蔬菜批发','2026-08-23',20,0.6),
+  ING('i19','番茄','蔬菜类','茄果类','斤',4,5,95,'城东蔬菜批发','2026-08-24',5,0.5),
+  ING('i20','茄子','蔬菜类','茄果类','斤',3.5,8,92,'城东蔬菜批发','2026-08-24',5,0.6),
+  ING('i21','青椒','蔬菜类','茄果类','斤',5,8,92,'城东蔬菜批发','2026-08-24',5,0.3),
+  ING('i22','冬瓜','蔬菜类','茄果类','斤',2,10,90,'城东蔬菜批发','2026-08-22',10,0.6),
+  ING('i23','香菇','蔬菜类','菌菇类','斤',8,10,90,'城东蔬菜批发','2026-08-24',3,0.2),
+  ING('i24','五花肉','肉类','猪肉','斤',18,5,95,'双汇冷鲜肉','2026-08-23',4,0.5),
+  ING('i25','里脊肉','肉类','猪肉','斤',22,5,95,'双汇冷鲜肉','2026-08-23',4,0.4),
+  ING('i26','排骨','肉类','猪肉','斤',26,15,85,'双汇冷鲜肉','2026-08-23',3,0.8),
+  ING('i27','猪蹄','肉类','猪肉','斤',15,20,80,'双汇冷鲜肉','2026-08-23',4,1),
+  ING('i28','牛腩','肉类','牛肉','斤',38,10,90,'牛肉工坊','2026-08-21',4,0.6),
+  ING('i29','肥牛卷','肉类','牛肉','斤',45,2,100,'牛肉工坊','2026-08-21',6,0.5),
+  ING('i30','羊排','肉类','羊肉','斤',42,18,82,'草原牧业','2026-08-20',4,0.5),
+  ING('i31','鸡腿肉','肉类','禽肉','斤',12,15,85,'温氏生鲜','2026-08-24',3,0.5),
+  ING('i32','老鸭','肉类','禽肉','斤',15,30,70,'温氏生鲜','2026-08-23',3,1.5),
+  ING('i33','豆腐','豆制品类','豆腐','斤',2.5,2,100,'豆香源','2026-08-24',1,0.6),
+  ING('i34','千张','豆制品类','豆皮','斤',6,2,100,'豆香源','2026-08-24',2,0.3),
+  ING('i35','香干','豆制品类','豆干','斤',7,2,100,'豆香源','2026-08-24',2,0.4),
+  ING('i36','东北大米','米面粮油类','大米','斤',4,2,100,'粮油副食行','2026-08-20',180,0.5),
+  ING('i37','挂面','米面粮油类','面粉','斤',5,2,100,'粮油副食行','2026-08-20',90,0.3),
+  ING('i38','大豆油','米面粮油类','食用油','斤',6.5,1,100,'金龙鱼代理','2026-08-18',180,0.15),
+  ING('i39','生抽','调料类','基础调料','瓶',12,1,100,'海天经销','2026-08-15',365,0.05),
+  ING('i40','老抽','调料类','基础调料','瓶',10,1,100,'海天经销','2026-08-15',365,0.04),
+  ING('i41','料酒','调料类','基础调料','瓶',8,1,100,'海天经销','2026-08-15',365,0.05),
+  ING('i42','食盐','调料类','基础调料','包',2,1,100,'中盐直供','2026-08-10',365,0.02),
+  ING('i43','白糖','调料类','基础调料','斤',5,1,100,'粮油副食行','2026-08-10',365,0.05),
+  ING('i44','大蒜','调料类','香辛料','斤',8,5,100,'城东蔬菜批发','2026-08-20',30,0.05),
+  ING('i45','生姜','调料类','香辛料','斤',7,5,100,'城东蔬菜批发','2026-08-20',30,0.05),
+  ING('i46','干辣椒','调料类','香辛料','斤',18,2,100,'川味干货行','2026-07-01',365,0.02),
+  ING('i47','花椒','调料类','香辛料','斤',35,2,100,'川味干货行','2026-07-01',365,0.01),
+  ING('i48','郫县豆瓣酱','调料类','酱料','瓶',15,1,100,'川味干货行','2026-07-10',180,0.1),
+  ING('i49','蚝油','调料类','酱料','瓶',10,1,100,'海天经销','2026-07-20',180,0.05),
+  ING('i50','黑木耳','干货类','菌菇干货','斤',45,2,95,'川味干货行','2026-06-01',365,0.05),
+  ING('i51','干香菇','干货类','菌菇干货','斤',50,2,95,'川味干货行','2026-06-01',365,0.05),
+  ING('i52','虾皮','干货类','海味干货','斤',25,2,100,'海鲜市场老王','2026-07-01',90,0.05),
+  ING('i53','黄豆','干货类','豆类','斤',6,2,100,'粮油副食行','2026-07-01',365,0.1),
+  ING('i54','鸡蛋','蛋奶类','蛋类','个',1.2,5,95,'蛋品基地','2026-08-22',15,2),
+  ING('i55','皮蛋','蛋奶类','蛋类','个',2.5,3,95,'蛋品基地','2026-08-10',60,1)
+];
+
+const SAMPLE_DISHES = [
+  DISH('d1','水煮鱼','热菜',68,25,[
+    BOM('i1',1.2),BOM('i14',0.5),BOM('i46',0.05),BOM('i47',0.02),
+    BOM('i48',0.15),BOM('i38',0.3),BOM('i45',0.05),BOM('i44',0.05)]),
+  DISH('d2','红烧肉','热菜',58,20,[
+    BOM('i24',0.8),BOM('i43',0.08),BOM('i39',0.1),BOM('i40',0.08),
+    BOM('i41',0.08),BOM('i45',0.05),BOM('i13',0.05)]),
+  DISH('d3','清蒸鲈鱼','热菜',78,12,[
+    BOM('i2',0.7),BOM('i45',0.03),BOM('i13',0.1),BOM('i39',0.05),BOM('i41',0.05)]),
+  DISH('d4','番茄炒蛋','热菜',20,40,[
+    BOM('i19',0.6),BOM('i54',3),BOM('i43',0.05),BOM('i42',0.02),BOM('i38',0.1)]),
+  DISH('d5','香菇滑鸡','热菜',36,25,[
+    BOM('i31',0.6),BOM('i23',0.2),BOM('i45',0.03),BOM('i39',0.05),BOM('i49',0.05),BOM('i43',0.03)]),
+  DISH('d6','蒜蓉油麦菜','热菜',18,20,[
+    BOM('i12',0.6),BOM('i44',0.05),BOM('i49',0.05)]),
+  DISH('d7','冬瓜排骨汤','汤品',38,25,[
+    BOM('i26',0.8),BOM('i22',0.6),BOM('i45',0.03),BOM('i42',0.02)]),
+  DISH('d8','皮蛋豆腐','凉菜',15,18,[
+    BOM('i33',0.6),BOM('i55',1),BOM('i39',0.05),BOM('i13',0.05)]),
+  DISH('d9','葱油拌面','主食',16,30,[
+    BOM('i37',0.4),BOM('i13',0.1),BOM('i38',0.15),BOM('i39',0.08),BOM('i43',0.03)]),
+  DISH('d10','米饭','主食',3,35,[BOM('i36',0.5)]),
+  DISH('d11','现磨豆浆','饮品',8,50,[BOM('i53',0.1),BOM('i43',0.05)])
+];
+
+const DEFAULT_STATE = {
+  ingredients: SAMPLE_INGREDIENTS,
+  dishes: SAMPLE_DISHES,
+  venue: { shopArea:120, shopRent:8000, shopProperty:600, shopUtilities:2500, homeArea:0, homeCost:0, homeProperty:0, homeUtilities:0, otherFixed:500, businessDays:30, renovationTotal:120000, renovationMonths:36 },
+  staff: [
+    STAFF('店长',1,8000,15,400,0,0),
+    STAFF('厨师',2,6500,15,500,0,0),
+    STAFF('切配',1,4000,15,300,0,0),
+    STAFF('服务员',2,3600,15,400,0,0),
+    STAFF('收银员',1,3800,15,300,0,0)
+  ],
+  delivery: { mode:'third', platform:'美团', commissionRate:8, perOrderFee:3, orderAmountPreview:50, riderSalary:5000, packagingFee:1.5, vehicleDepreciation:800 },
+  equipment: [
+    EQ('e1','双灶猛火灶','灶具',2,2800,5),
+    EQ('e2','四门冰柜','制冷',1,4500,8),
+    EQ('e3','保鲜工作台','制冷',2,2600,8),
+    EQ('e4','绞肉机','加工',1,1200,5),
+    EQ('e5','切片机','加工',1,1800,5),
+    EQ('e6','置物架','储物',3,350,5),
+    EQ('e7','餐具套装','餐具',30,35,3),
+    EQ('e8','收银机','其他',1,2500,5),
+    EQ('e9','电饭煲','加工',2,600,4),
+    EQ('e10','排烟风机','其他',1,3500,5)
+  ],
+  settings: { expectedDailyOrders:300, initialStockBudget:5000, syncUrl:'', syncToken:'', syncAuto:false }
+};
+
+/* ================= 状态管理 ================= */
+function normalize(s){
+  const d = clone(DEFAULT_STATE);
+  const out = Object.assign({}, d, s || {});
+  out.venue = Object.assign({}, d.venue, (s && s.venue) || {});
+  const v0 = (s && s.venue) || {};
+  /* 旧版本字段迁移：area/rent/property/utilities → 商铺板块 */
+  if(v0.area != null) out.venue.shopArea = v0.area;
+  if(v0.rent != null) out.venue.shopRent = v0.rent;
+  if(v0.property != null) out.venue.shopProperty = v0.property;
+  if(v0.utilities != null) out.venue.shopUtilities = v0.utilities;
+  ['area','rent','property','utilities'].forEach(k => delete out.venue[k]);
+  out.delivery = Object.assign({}, d.delivery, (s && s.delivery) || {});
+  out.settings = Object.assign({}, d.settings, (s && s.settings) || {});
+  ['ingredients','dishes','staff','equipment'].forEach(k => { if(!Array.isArray(out[k])) out[k] = []; });
+  return out;
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return clone(DEFAULT_STATE);
+    return normalize(JSON.parse(raw));
+  }catch(e){ return clone(DEFAULT_STATE); }
+}
+function save(){ try{ state.savedAt = new Date().toISOString(); localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+function markDataChanged(){ state.updatedAt = new Date().toISOString(); }
+function emptyState(){
+  return { ingredients:[], dishes:[], venue:clone(DEFAULT_STATE.venue), staff:[], delivery:clone(DEFAULT_STATE.delivery), equipment:[], settings:clone(DEFAULT_STATE.settings) };
+}
+let state = loadState();
+
+/* ================= 核心计算 ================= */
+function getIng(id){ return state.ingredients.find(i => i.id === id); }
+function businessDays(){ return Math.max(1, +state.venue.businessDays || 1); }
+function expectedDailyOrders(){ return Math.max(1, +state.settings.expectedDailyOrders || 1); }
+function ingNetPrice(ing){
+  const r = Math.max(1, +ing.netRate || 0) / 100;
+  return r > 0 ? (+ing.price || 0) / r : 0;
+}
+function dishIngCost(dish){
+  return (dish.bom || []).reduce((sum, b) => {
+    const ing = getIng(b.ingId);
+    return ing ? sum + ingNetPrice(ing) * (+b.usage || 0) : sum;
+  }, 0);
+}
+function renovationDep(){ return state.venue.renovationMonths > 0 ? (+state.venue.renovationTotal || 0) / state.venue.renovationMonths : 0; }
+function shopVenueCost(){
+  const v = state.venue;
+  return (+v.shopRent||0) + (+v.shopProperty||0) + (+v.shopUtilities||0);
+}
+function homeVenueCost(){
+  const v = state.venue;
+  return (+v.homeCost||0) + (+v.homeProperty||0) + (+v.homeUtilities||0);
+}
+function monthlyVenueCost(){
+  const v = state.venue;
+  return shopVenueCost() + homeVenueCost() + renovationDep() + (+v.otherFixed||0);
+}
+function dailyVenueCost(){ return monthlyVenueCost() / businessDays(); }
+function staffMonthlyCost(s){
+  return (+s.salary||0) * (1 + (+s.socialRate||0)/100) + (+s.meal||0) + (+s.housing||0) + (+s.other||0);
+}
+function monthlyLabor(){ return state.staff.reduce((t,s) => t + staffMonthlyCost(s) * Math.max(0, +s.count||0), 0); }
+function dailyLabor(){ return monthlyLabor() / businessDays(); }
+function eqTotal(e){ return (+e.qty||0) * (+e.unitPrice||0); }
+function eqMonthlyDep(e){ return e.years > 0 ? eqTotal(e) / (e.years * 12) : 0; }
+function equipmentTotalInvest(){ return state.equipment.reduce((t,e) => t + eqTotal(e), 0); }
+function equipmentMonthlyDep(){ return state.equipment.reduce((t,e) => t + eqMonthlyDep(e), 0); }
+function sharedCostPerPortion(){ return (dailyVenueCost() + dailyLabor()) / expectedDailyOrders(); }
+function deliveryPerOrder(price){
+  const d = state.delivery;
+  if(d.mode === 'self'){
+    const monthlyOrders = expectedDailyOrders() * businessDays();
+    return (+d.packagingFee||0) + ((+d.riderSalary||0) + (+d.vehicleDepreciation||0)) / Math.max(1, monthlyOrders);
+  }
+  return (+price||0) * ((+d.commissionRate||0)/100) + (+d.perOrderFee||0);
+}
+function selfFixedCost(){ return (+state.delivery.riderSalary||0) + (+state.delivery.vehicleDepreciation||0); }
+function dishTotalCost(dish){ return dishIngCost(dish) + sharedCostPerPortion() + deliveryPerOrder(dish.price); }
+function grossMargin(dish){ const p = +dish.price||0; return p > 0 ? (p - dishIngCost(dish)) / p : 0; }
+function netMargin(dish){ const p = +dish.price||0; return p > 0 ? (p - dishTotalCost(dish)) / p : 0; }
+function monthlyFixedCost(){
+  let f = monthlyVenueCost() + monthlyLabor() + equipmentMonthlyDep();
+  if(state.delivery.mode === 'self') f += selfFixedCost();
+  return f;
+}
+function totalInvestment(){
+  return equipmentTotalInvest() + (+state.venue.renovationTotal||0) + (+state.settings.initialStockBudget||0);
+}
+function weightedGrossMargin(){
+  let rev = 0, ing = 0;
+  state.dishes.forEach(d => {
+    const q = +d.sales||0;
+    rev += q * (+d.price||0);
+    ing += q * dishIngCost(d);
+  });
+  return rev > 0 ? (rev - ing) / rev : 0;
+}
+function breakEvenDaily(){
+  const wgm = weightedGrossMargin();
+  return (wgm > 0) ? monthlyFixedCost() / wgm / businessDays() : 0;
+}
+function projectedRevenue(){
+  return state.dishes.reduce((t,d) => t + (+d.sales||0) * (+d.price||0), 0) * businessDays();
+}
+function projectedProfit(){
+  return state.dishes.reduce((t,d) => t + (+d.sales||0) * ((+d.price||0) - dishTotalCost(d)), 0) * businessDays();
+}
+function deliveryMonthlyCost(){
+  return state.dishes.reduce((t,d) => t + (+d.sales||0) * deliveryPerOrder(d.price), 0) * businessDays();
+}
+function pieData(){
+  const days = businessDays();
+  let food = 0, delivery = 0;
+  state.dishes.forEach(d => {
+    const q = +d.sales||0;
+    food += dishIngCost(d) * q * days;
+    delivery += deliveryPerOrder(d.price) * q * days;
+  });
+  return [
+    { label:'食材成本', value:food, color:'#2563eb' },
+    { label:'人力成本', value:monthlyLabor(), color:'#f59e0b' },
+    { label:'场地成本', value:monthlyVenueCost(), color:'#0d9488' },
+    { label:'其他（配送+设备折旧）', value:delivery + equipmentMonthlyDep(), color:'#8b5cf6' }
+  ];
+}
+
+/* ================= 渲染：食材 ================= */
+function cat1Options(sel){ return Object.keys(CATS).map(c => `<option ${c===sel?'selected':''}>${c}</option>`).join(''); }
+function cat2Options(cat1, sel){
+  const list = CATS[cat1] || CATS['水产类'];
+  return list.map(c => `<option ${c===sel?'selected':''}>${c}</option>`).join('');
+}
+function syncCat2(selEl){
+  const tr = selEl.closest('.ing-row');
+  const idx = +tr.dataset.idx;
+  const ing = state.ingredients[idx];
+  ing.cat1 = selEl.value;
+  const cat2Sel = tr.querySelector('[data-f="cat2"]');
+  cat2Sel.innerHTML = cat2Options(ing.cat1, '');
+  ing.cat2 = cat2Sel.value;
+  recalc();
+}
+function filteredIngs(){
+  const q = (document.getElementById('ingSearch').value || '').trim().toLowerCase();
+  const c1 = document.getElementById('filterCat1').value;
+  const c2 = document.getElementById('filterCat2').value;
+  return state.ingredients.map((ing,i) => ({ing,i})).filter(({ing}) =>
+    (!c1 || ing.cat1 === c1) && (!c2 || ing.cat2 === c2) &&
+    (!q || (ing.name||'').toLowerCase().includes(q) || (ing.supplier||'').toLowerCase().includes(q)));
+}
+function renderIngredients(){
+  const body = document.getElementById('ingGrid');
+  const rows = filteredIngs();
+  body.innerHTML = rows.map(({ing,i}) => `
+    <div class="ing-row" data-idx="${i}">
+      <div class="cell" data-label="食材名称"><input class="c" value="${esc(ing.name)}" data-f="name"></div>
+      <div class="cell" data-label="一级分类"><select class="c" data-f="cat1" onchange="syncCat2(this)">${cat1Options(ing.cat1)}</select></div>
+      <div class="cell" data-label="二级分类"><select class="c" data-f="cat2">${cat2Options(ing.cat1, ing.cat2)}</select></div>
+      <div class="cell" data-label="单位"><input class="s" value="${esc(ing.unit)}" data-f="unit" placeholder="斤"></div>
+      <div class="cell" data-label="采购单价(元)"><input class="n" type="number" min="0" step="0.1" value="${+ing.price||0}" data-f="price"></div>
+      <div class="cell" data-label="损耗率(%)"><input class="n" type="number" min="0" max="100" value="${+ing.lossRate||0}" data-f="lossRate"></div>
+      <div class="cell" data-label="净料率(%)"><input class="n" type="number" min="1" max="100" value="${+ing.netRate||0}" data-f="netRate"></div>
+      <div class="cell net" data-label="净料成本(元/单位)">${money(ingNetPrice(ing))}</div>
+      <div class="cell" data-label="供应商"><input class="s" value="${esc(ing.supplier)}" data-f="supplier" placeholder="供应商"></div>
+      <div class="cell" data-label="采购日期"><input class="d" type="date" value="${esc(ing.purchaseDate)}" data-f="purchaseDate"></div>
+      <div class="cell" data-label="保质期(天)"><input class="n" type="number" min="0" value="${+ing.shelfLife||0}" data-f="shelfLife"></div>
+      <div class="cell" data-label="标准用量(每份)"><input class="n" type="number" min="0" step="0.01" value="${+ing.usage||0}" data-f="usage"></div>
+      <div class="cell"><button class="btn icon danger" onclick="delIngredient(${i})" title="删除">✕</button></div>
+    </div>`).join('');
+  document.getElementById('ingCount').textContent = `共 ${rows.length} / ${state.ingredients.length} 种食材`;
+}
+function addIngredient(){
+  state.ingredients.push({ id:uid('i'), name:'新食材', cat1:'蔬菜类', cat2:'叶菜类', unit:'斤', price:0, lossRate:10, netRate:90, supplier:'', purchaseDate:todayStr(), shelfLife:7, usage:0.1 });
+  renderIngredients(); recalc();
+}
+function delIngredient(idx){
+  state.ingredients.splice(idx,1);
+  renderIngredients(); renderDishes(); recalc();
+}
+document.getElementById('ingGrid').addEventListener('input', e => {
+  const tr = e.target.closest('.ing-row'); if(!tr) return;
+  const idx = +tr.dataset.idx; const ing = state.ingredients[idx]; if(!ing) return;
+  const f = e.target.dataset.f;
+  if(['price','lossRate','netRate','shelfLife','usage'].includes(f)){
+    let v = num(e.target);
+    if(f === 'netRate') v = Math.min(100, Math.max(1, v));
+    if(f === 'lossRate') v = Math.min(100, Math.max(0, v));
+    ing[f] = v; e.target.value = v;
+  } else {
+    ing[f] = e.target.value;
+  }
+  recalc();
+});
+
+/* ================= 渲染：场地 ================= */
+['shopArea','shopRent','shopProperty','shopUtilities','homeArea','homeCost','homeProperty','homeUtilities','otherFixed','renovationTotal'].forEach(k => {
+  document.getElementById('v-' + k).addEventListener('input', e => {
+    state.venue[k] = Math.max(0, num(e.target));
+    recalc();
+  });
+});
+document.getElementById('v-businessDays').addEventListener('input', e => {
+  state.venue.businessDays = Math.max(1, Math.round(num(e.target)) || 1);
+  e.target.value = state.venue.businessDays;
+  recalc();
+});
+document.getElementById('v-renovationMonths').addEventListener('input', e => {
+  state.venue.renovationMonths = Math.max(1, Math.round(num(e.target)) || 1);
+  e.target.value = state.venue.renovationMonths;
+  recalc();
+});
+
+/* ================= 渲染：人力 ================= */
+function renderStaff(){
+  const body = document.getElementById('staffBody');
+  body.innerHTML = state.staff.map((s,idx) => {
+    const per = staffMonthlyCost(s);
+    return `
+    <tr data-idx="${idx}">
+      <td><select class="c" data-f="position">${POSITIONS.map(p => `<option ${p===s.position?'selected':''}>${p}</option>`).join('')}</select></td>
+      <td><input class="n" type="number" min="0" value="${+s.count||0}" data-f="count"></td>
+      <td><input class="n" type="number" min="0" step="100" value="${+s.salary||0}" data-f="salary"></td>
+      <td><input class="n" type="number" min="0" max="100" value="${+s.socialRate||0}" data-f="socialRate"></td>
+      <td><input class="n" type="number" min="0" value="${+s.meal||0}" data-f="meal"></td>
+      <td><input class="n" type="number" min="0" value="${+s.housing||0}" data-f="housing"></td>
+      <td><input class="n" type="number" min="0" value="${+s.other||0}" data-f="other"></td>
+      <td class="calc per">${money(per)}</td>
+      <td class="calc sub">${money(per * Math.max(0,+s.count||0))}</td>
+      <td><button class="btn icon danger" onclick="delStaff(${idx})" title="删除">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+function addStaff(){
+  state.staff.push({ id:uid('s'), position:'厨师', count:1, salary:6000, socialRate:15, meal:300, housing:0, other:0 });
+  renderStaff(); recalc();
+}
+function delStaff(idx){ state.staff.splice(idx,1); renderStaff(); recalc(); }
+document.getElementById('staffBody').addEventListener('input', e => {
+  const tr = e.target.closest('tr'); if(!tr) return;
+  const idx = +tr.dataset.idx; const s = state.staff[idx]; if(!s) return;
+  const f = e.target.dataset.f;
+  if(f === 'position'){ s.position = e.target.value; }
+  else {
+    let v = num(e.target);
+    if(f === 'socialRate') v = Math.min(100, Math.max(0, v));
+    s[f] = Math.max(0, v);
+  }
+  recalc();
+});
+
+/* ================= 渲染：配送 ================= */
+document.querySelectorAll('input[name="deliveryMode"]').forEach(r =>
+  r.addEventListener('change', () => {
+    state.delivery.mode = document.querySelector('input[name="deliveryMode"]:checked').value;
+    recalc();
+  }));
+['platform','commissionRate','perOrderFee','orderAmountPreview','riderSalary','packagingFee','vehicleDepreciation'].forEach(k => {
+  document.getElementById('del-' + k).addEventListener('input', e => {
+    state.delivery[k] = (k === 'platform') ? e.target.value : Math.max(0, num(e.target));
+    recalc();
+  });
+});
+
+/* ================= 渲染：菜品 ================= */
+function ingOptions(selId){
+  const groups = {};
+  state.ingredients.forEach(ing => { (groups[ing.cat1] = groups[ing.cat1] || []).push(ing); });
+  let html = '<option value="">—— 选择食材 ——</option>';
+  Object.keys(groups).forEach(g => {
+    html += `<optgroup label="${esc(g)}">` + groups[g].map(ing =>
+      `<option value="${esc(ing.id)}" ${ing.id===selId?'selected':''}>${esc(ing.name)}（${money(ingNetPrice(ing))}/${esc(ing.unit)}）</option>`).join('') + '</optgroup>';
+  });
+  return html;
+}
+function dishCard(dish, idx){
+  const ing = dishIngCost(dish), shared = sharedCostPerPortion(), del = deliveryPerOrder(dish.price), total = ing + shared + del;
+  const gm = grossMargin(dish), nm = netMargin(dish);
+  const bomRows = (dish.bom || []).map((b, bi) => {
+    const ing0 = getIng(b.ingId);
+    const np = ing0 ? ingNetPrice(ing0) : 0;
+    return `
+      <tr data-bom="${bi}">
+        <td><select class="c" data-f="ingId">${ingOptions(ing0 ? ing0.id : '')}</select>${b.ingId && !ing0 ? '<span class="badge">食材已删除</span>' : ''}</td>
+        <td><input class="n" type="number" min="0" step="0.01" value="${+b.usage||0}" data-f="usage"></td>
+        <td class="calc bom-unit">${ing0 ? esc(ing0.unit) : '—'}</td>
+        <td class="calc bom-net">${money(np)}</td>
+        <td class="calc bom-cost">${money(np * (+b.usage||0))}</td>
+        <td><button class="btn icon danger" onclick="delBomRow(${idx},${bi})" title="删除食材">✕</button></td>
+      </tr>`;
+  }).join('');
+  return `
+  <div class="card dish" data-idx="${idx}">
+    <div class="dish-head">
+      <div class="dish-fields">
+        <div class="field"><label>菜品名称</label><input class="c" value="${esc(dish.name)}" data-f="name"></div>
+        <div class="field"><label>分类</label><select data-f="category">${DISH_CATS.map(c => `<option ${c===dish.category?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="field"><label>售价（元）</label><input class="n" type="number" min="0" step="0.5" value="${+dish.price||0}" data-f="price"></div>
+        <div class="field"><label>预估日销量（份）</label><input class="n" type="number" min="0" value="${+dish.sales||0}" data-f="sales"></div>
+      </div>
+      <div class="dish-chips">
+        <span class="chip brand">食材成本 <span class="c-ing">${money(ing)}</span></span>
+        <span class="chip">分摊 <span class="c-shared">${money(shared)}</span></span>
+        <span class="chip">配送 <span class="c-del">${money(del)}</span></span>
+        <span class="chip">总成本 <span class="c-total">${money(total)}</span></span>
+        <span class="chip good c-gm">毛利率 ${pct1(gm)}</span>
+        <span class="chip c-nm">净利率 ${pct1(nm)}</span>
+      </div>
+      <div class="row-actions">
+        <button class="btn ghost" onclick="toggleBom(this)">🧾 配方</button>
+        <button class="btn icon danger" onclick="delDish(${idx})" title="删除菜品">✕</button>
+      </div>
+    </div>
+    <div class="bom-box hidden">
+      <div class="table-wrap">
+        <table class="data" style="min-width:760px">
+          <thead><tr><th>食材（选入配方）</th><th>每份用量</th><th>单位</th><th>净料成本(元/单位)</th><th>该食材成本</th><th></th></tr></thead>
+          <tbody class="bomBody">${bomRows || '<tr><td colspan="6" class="muted">尚未设置配方，点击下方按钮添加食材。</td></tr>'}</tbody>
+        </table>
+      </div>
+      <div class="toolbar" style="margin-top:10px">
+        <button class="btn ghost" onclick="addBomRow(${idx})">＋ 添加食材</button>
+      </div>
+    </div>
+  </div>`;
+}
+function renderDishes(){
+  const wrap = document.getElementById('dishList');
+  wrap.innerHTML = state.dishes.map((d,idx) => dishCard(d, idx)).join('');
+  document.getElementById('dishCount').textContent = `共 ${state.dishes.length} 道菜品`;
+}
+function addDish(){
+  state.dishes.push({ id:uid('d'), name:'新菜品' + (state.dishes.length + 1), category:'热菜', price:0, sales:0, bom:[{ingId:'', usage:0}] });
+  renderDishes(); recalc();
+}
+function delDish(idx){ state.dishes.splice(idx,1); renderDishes(); recalc(); }
+function addBomRow(idx){ state.dishes[idx].bom.push({ingId:'', usage:0}); renderDishes(); recalc(); }
+function delBomRow(idx, bi){ state.dishes[idx].bom.splice(bi,1); renderDishes(); recalc(); }
+function toggleBom(btn){
+  const box = btn.closest('.dish').querySelector('.bom-box');
+  box.classList.toggle('hidden');
+  btn.textContent = box.classList.contains('hidden') ? '🧾 配方' : '🧾 收起配方';
+}
+document.getElementById('dishList').addEventListener('input', e => {
+  const card = e.target.closest('.dish'); if(!card) return;
+  const idx = +card.dataset.idx; const d = state.dishes[idx]; if(!d) return;
+  const f = e.target.dataset.f;
+  if(e.target.closest('.bomBody')){
+    const bi = +e.target.closest('tr').dataset.bom;
+    const b = d.bom[bi]; if(!b) return;
+    if(f === 'usage') b.usage = Math.max(0, num(e.target));
+    else b.ingId = e.target.value;
+  } else {
+    if(f === 'name') d.name = e.target.value;
+    else if(f === 'category') d.category = e.target.value;
+    else d[f] = Math.max(0, num(e.target));
+  }
+  recalc();
+});
+document.getElementById('setExpectedOrders').addEventListener('input', e => {
+  state.settings.expectedDailyOrders = Math.max(1, Math.round(num(e.target)) || 1);
+  e.target.value = state.settings.expectedDailyOrders;
+  recalc();
+});
+
+/* ================= 渲染：设备 ================= */
+function renderEquipment(){
+  const body = document.getElementById('eqBody');
+  body.innerHTML = state.equipment.map((e,idx) => {
+    const total = eqTotal(e), dep = eqMonthlyDep(e);
+    return `
+    <tr data-idx="${idx}">
+      <td><input class="c" value="${esc(e.name)}" data-f="name"></td>
+      <td><select class="c" data-f="category">${EQUIP_CATS.map(c => `<option ${c===e.category?'selected':''}>${c}</option>`).join('')}</select></td>
+      <td><input class="n" type="number" min="0" value="${+e.qty||0}" data-f="qty"></td>
+      <td><input class="n" type="number" min="0" step="0.1" value="${+e.unitPrice||0}" data-f="unitPrice"></td>
+      <td class="calc eq-total">${money(total)}</td>
+      <td><input class="n" type="number" min="1" value="${+e.years||5}" data-f="years"></td>
+      <td class="calc eq-dep">${money(dep)}</td>
+      <td><button class="btn icon danger" onclick="delEquipment(${idx})" title="删除">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+function addEquipment(){
+  state.equipment.push({ id:uid('e'), name:'新设备', category:'其他', qty:1, unitPrice:0, years:5 });
+  renderEquipment(); recalc();
+}
+function delEquipment(idx){ state.equipment.splice(idx,1); renderEquipment(); recalc(); }
+document.getElementById('eqBody').addEventListener('input', e => {
+  const tr = e.target.closest('tr'); if(!tr) return;
+  const idx = +tr.dataset.idx; const eq = state.equipment[idx]; if(!eq) return;
+  const f = e.target.dataset.f;
+  if(f === 'name') eq.name = e.target.value;
+  else if(f === 'category') eq.category = e.target.value;
+  else eq[f] = Math.max(0, num(e.target));
+  recalc();
+});
+document.getElementById('eqStockBudget').addEventListener('input', e => {
+  state.settings.initialStockBudget = Math.max(0, num(e.target));
+  recalc();
+});
+
+/* ================= 刷新全部计算结果 ================= */
+function setChipClass(el, cls){ el.classList.remove('good','warn','bad'); if(cls) el.classList.add(cls); }
+function refreshComputed(){
+  /* 场地 */
+  setText('v-shopTotal', money(shopVenueCost()));
+  setText('v-shopDaily', money(shopVenueCost() / businessDays()));
+  setText('v-homeTotal', money(homeVenueCost()));
+  setText('v-homeDaily', money(homeVenueCost() / businessDays()));
+  setText('v-renovDep', money(renovationDep()));
+  setText('v-equipDep', money(equipmentMonthlyDep()));
+  setText('v-monthly', money(monthlyVenueCost()));
+  setText('v-daily', money(dailyVenueCost()));
+
+  /* 人力 */
+  document.querySelectorAll('#staffBody tr').forEach(tr => {
+    const idx = +tr.dataset.idx; const s = state.staff[idx]; if(!s) return;
+    const per = staffMonthlyCost(s);
+    const perEl = tr.querySelector('.per'); if(perEl) perEl.textContent = money(per);
+    const subEl = tr.querySelector('.sub'); if(subEl) subEl.textContent = money(per * Math.max(0,+s.count||0));
+  });
+  setText('st-total', money(monthlyLabor()));
+  setText('st-daily', money(dailyLabor()));
+  setText('st-shared', money(sharedCostPerPortion()));
+
+  /* 食材净料成本 */
+  document.querySelectorAll('#ingGrid .ing-row').forEach(tr => {
+    const idx = +tr.dataset.idx; const ing = state.ingredients[idx]; if(!ing) return;
+    const cell = tr.querySelector('.net'); if(cell) cell.textContent = money(ingNetPrice(ing));
+  });
+
+  /* 设备 */
+  document.querySelectorAll('#eqBody tr').forEach(tr => {
+    const idx = +tr.dataset.idx; const eq = state.equipment[idx]; if(!eq) return;
+    const t = eqTotal(eq);
+    const tEl = tr.querySelector('.eq-total'); if(tEl) tEl.textContent = money(t);
+    const dEl = tr.querySelector('.eq-dep'); if(dEl) dEl.textContent = money(eqMonthlyDep(eq));
+  });
+  setText('eq-invest', money(equipmentTotalInvest()));
+  setText('eq-dep-total', money(equipmentMonthlyDep()));
+  setText('eq-renovation', money(+state.venue.renovationTotal||0));
+  setText('eq-total-invest', money(totalInvestment()));
+
+  /* 配送 */
+  const isThird = state.delivery.mode === 'third';
+  document.getElementById('thirdPanel').classList.toggle('hidden', !isThird);
+  document.getElementById('selfPanel').classList.toggle('hidden', isThird);
+  setText('del3-cost', money((+state.delivery.orderAmountPreview||0) * ((+state.delivery.commissionRate||0)/100) + (+state.delivery.perOrderFee||0)));
+  setText('del3-month', money(deliveryMonthlyCost()));
+  setText('del3-note', '按售价 × 抽佣 + 固定配送费');
+  setText('delSelf-cost', money(deliveryPerOrder(50)));
+  setText('delSelf-month', money(deliveryMonthlyCost()));
+  setText('delSelf-fixed', money(selfFixedCost()));
+
+  /* 菜品 */
+  document.querySelectorAll('.dish').forEach(card => {
+    const idx = +card.dataset.idx; const d = state.dishes[idx]; if(!d) return;
+    const ing = dishIngCost(d), shared = sharedCostPerPortion(), del = deliveryPerOrder(d.price), total = ing + shared + del;
+    const gm = grossMargin(d), nm = netMargin(d);
+    const cIng = card.querySelector('.c-ing'); if(cIng) cIng.textContent = money(ing);
+    const cShared = card.querySelector('.c-shared'); if(cShared) cShared.textContent = money(shared);
+    const cDel = card.querySelector('.c-del'); if(cDel) cDel.textContent = money(del);
+    const cTotal = card.querySelector('.c-total'); if(cTotal) cTotal.textContent = money(total);
+    const cGm = card.querySelector('.c-gm');
+    if(cGm){ cGm.textContent = '毛利率 ' + pct1(gm); setChipClass(cGm, gm >= 0.5 ? 'good' : (gm >= 0.3 ? 'warn' : 'bad')); }
+    const cNm = card.querySelector('.c-nm');
+    if(cNm){ cNm.textContent = '净利率 ' + pct1(nm); setChipClass(cNm, nm >= 0 ? 'good' : 'bad'); }
+    card.querySelectorAll('.bomBody tr').forEach(tr => {
+      const bi = +tr.dataset.bom; const b = d.bom[bi]; if(!b) return;
+      const ing0 = getIng(b.ingId);
+      const np = ing0 ? ingNetPrice(ing0) : 0;
+      const uEl = tr.querySelector('.bom-unit'); if(uEl) uEl.textContent = ing0 ? ing0.unit : '—';
+      const nEl = tr.querySelector('.bom-net'); if(nEl) nEl.textContent = money(np);
+      const cEl = tr.querySelector('.bom-cost'); if(cEl) cEl.textContent = money(np * (+b.usage||0));
+    });
+  });
+
+  /* 看板 */
+  updateDashboard();
+  drawPie();
+}
+
+function updateDashboard(){
+  const invest = totalInvestment();
+  const fixed = monthlyFixedCost();
+  const wgm = weightedGrossMargin();
+  const be = breakEvenDaily();
+  const rev = projectedRevenue();
+  const profit = projectedProfit();
+  const netRate = rev > 0 ? profit / rev : 0;
+  const days = businessDays();
+
+  setText('kpi-invest', money0(invest));
+  setText('kpi-invest-sub', `设备 ${money0(equipmentTotalInvest())} · 装修 ${money0(+state.venue.renovationTotal||0)} · 首批食材 ${money0(+state.settings.initialStockBudget||0)}`);
+  setText('kpi-fixed', money0(fixed));
+  setText('kpi-fixed-sub', `场地 ${money0(monthlyVenueCost())} + 人力 ${money0(monthlyLabor())} + 折旧 ${money0(equipmentMonthlyDep())}${state.delivery.mode==='self' ? ' + 配送固定 ' + money0(selfFixedCost()) : ''}`);
+  setText('kpi-breakeven', money0(be));
+  setText('kpi-breakeven-sub', `综合毛利率 ${pct1(wgm)} · 营业 ${days} 天/月`);
+  setText('kpi-revenue', money0(rev));
+  setText('kpi-revenue-sub', `按 ${state.settings.expectedDailyOrders} 份/日 · ${days} 天/月`);
+  const profitEl = document.getElementById('kpi-profit');
+  profitEl.textContent = money0(profit);
+  profitEl.className = 'value ' + (profit >= 0 ? 'good' : 'bad');
+  setText('kpi-profit-sub', `日均 ${money0(rev/days)}`);
+  const netEl = document.getElementById('kpi-netrate');
+  netEl.textContent = pct1(netRate);
+  netEl.className = 'value ' + (netRate >= 0 ? 'good' : 'bad');
+  setText('kpi-netrate-sub', `盈亏平衡日营业额 ${money0(be)}`);
+
+  /* 毛利排行 */
+  const rank = state.dishes.map(d => ({ d, ing:dishIngCost(d), gm:grossMargin(d) })).sort((a,b) => b.gm - a.gm);
+  document.getElementById('rankBody').innerHTML = rank.length
+    ? rank.map((r,i) => {
+        const d = r.d, profitAmt = (+d.price||0) - r.ing;
+        const barW = Math.max(0, Math.min(100, r.gm*100));
+        return `<tr>
+          <td>${i+1}</td>
+          <td>${esc(d.name)}${d.bom.length ? '' : '<span class="badge">未设配方</span>'}</td>
+          <td class="num">${money(d.price)}</td>
+          <td class="num">${money(r.ing)}</td>
+          <td class="num ${profitAmt>=0?'pos':'neg'}">${money(profitAmt)}</td>
+          <td><span class="rank-bar"><i style="width:${barW}%"></i></span>${pct1(r.gm)}</td>
+        </tr>`;
+      }).join('')
+    : '<tr><td colspan="6" class="muted">暂无菜品，请到「菜品定价」添加。</td></tr>';
+  setText('rankNote', '毛利率 = (售价 − 食材成本) ÷ 售价，按毛利率从高到低排序；低客单引流款毛利率通常偏低。');
+
+  /* 经营构成明细 */
+  const bd = pieData();
+  document.getElementById('costBreakdown').innerHTML = [
+    { l:'月营业额', v: money0(rev) },
+    { l:'月食材成本', v: money0(bd[0].value) },
+    { l:'月人力成本', v: money0(bd[1].value) },
+    { l:'月场地成本', v: money0(bd[2].value) },
+    { l:'月配送成本', v: money0(deliveryMonthlyCost()) },
+    { l:'月设备折旧', v: money0(equipmentMonthlyDep()) },
+    { l:'月固定成本', v: money0(fixed) },
+    { l:'预计月利润', v: `<span class="${profit>=0?'pos':'neg'}">${money0(profit)}</span>` }
+  ].map(x => `<div class="item"><div class="l">${x.l}</div><div class="v">${x.v}</div></div>`).join('');
+}
+
+function drawPie(){
+  const canvas = document.getElementById('pie');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth || 420, H = 300;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,W,H);
+  const items = pieData();
+  const total = items.reduce((s,i) => s + i.value, 0);
+  const legend = document.getElementById('pieLegend');
+  if(total <= 0){
+    legend.innerHTML = '<span class="muted">暂无成本数据，请先录入食材与菜品。</span>';
+    ctx.fillStyle = '#94a3b8'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('暂无数据', W/2, H/2);
+    return;
+  }
+  const cx = W/2, cy = H/2, R = Math.min(W,H)/2 - 14, r = R * 0.58;
+  let a = -Math.PI/2;
+  items.forEach(it => {
+    const ang = it.value / total * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,a,a+ang); ctx.closePath();
+    ctx.fillStyle = it.color; ctx.fill();
+    a += ang;
+  });
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.fillStyle = '#0f766e'; ctx.font = '700 15px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('月成本', cx, cy - 3);
+  ctx.font = '600 13px sans-serif'; ctx.fillStyle = '#64748b';
+  ctx.fillText(money0(total), cx, cy + 16);
+  legend.innerHTML = items.map(it =>
+    `<span class="item"><span class="dot" style="background:${it.color}"></span>${it.label} ${money0(it.value)}（${pct1(it.value/total)}）</span>`).join('');
+}
+
+/* ================= 数据管理 ================= */
+function exportData(){
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '买菜成本联动数据_' + todayStr().replace(/-/g,'') + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function importData(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try{
+      const data = JSON.parse(rd.result);
+      state = normalize(data);
+      markDataChanged(); save(); renderAll();
+      setText('dataStatus', `✅ 导入成功：${state.ingredients.length} 种食材、${state.dishes.length} 道菜品。`);
+    }catch(err){
+      setText('dataStatus', '❌ 导入失败：文件不是有效的 JSON 数据。');
+    }
+  };
+  rd.readAsText(file);
+  ev.target.value = '';
+}
+function resetSample(){
+  if(!confirm('确定恢复内置示例数据？当前数据将被覆盖，建议先导出备份。')) return;
+  state = clone(DEFAULT_STATE);
+  markDataChanged(); save(); renderAll();
+  setText('dataStatus', '✅ 已恢复示例数据。');
+}
+function clearAll(){
+  if(!confirm('确定清空全部数据？此操作不可恢复，建议先导出备份。')) return;
+  state = emptyState();
+  markDataChanged(); save(); renderAll();
+  setText('dataStatus', '✅ 已清空全部数据。');
+}
+document.getElementById('importFile').addEventListener('change', importData);
+
+/* ================= 云端同步与本地文件 ================= */
+let fileHandle = null;
+let fileSaveTimer = null;
+let syncTimer = null;
+
+function readSyncCfg(){
+  return { url: (state.settings.syncUrl || '').trim(), token: (state.settings.syncToken || '').trim(), auto: !!state.settings.syncAuto };
+}
+function writeSyncCfg(){
+  state.settings.syncUrl = document.getElementById('syncUrl').value.trim();
+  state.settings.syncToken = document.getElementById('syncToken').value.trim();
+  state.settings.syncAuto = document.getElementById('syncAuto').checked;
+  save();
+  setSyncStatus(state.settings.syncAuto ? '✅ 自动同步已开启，修改数据后约 2 秒自动上传。' : '✅ 同步设置已保存。');
+}
+function setSyncStatus(msg){ const el = document.getElementById('syncStatus'); if(el) el.textContent = msg; }
+function setFileStatus(msg){ const el = document.getElementById('localFileStatus'); if(el) el.textContent = msg; }
+function syncHeaders(){
+  const h = { 'Content-Type':'application/json' };
+  const t = readSyncCfg().token;
+  if(t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+function adoptRemote(remote){
+  const keep = { url: state.settings.syncUrl || '', token: state.settings.syncToken || '', auto: !!state.settings.syncAuto };
+  state = normalize(remote);
+  if(keep.url) state.settings.syncUrl = keep.url;
+  if(keep.token) state.settings.syncToken = keep.token;
+  if(keep.auto) state.settings.syncAuto = keep.auto;
+  save(); renderAll();
+}
+async function syncUpload(){
+  const cfg = readSyncCfg();
+  if(!cfg.url){ setSyncStatus('请先填写同步地址。'); return; }
+  try{
+    save();
+    const res = await fetch(cfg.url, { method:'PUT', headers: syncHeaders(), body: JSON.stringify(state) });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    setSyncStatus('✅ 已于 ' + new Date().toLocaleTimeString() + ' 上传到云端（' + cfg.url + '）');
+  }catch(err){
+    setSyncStatus('❌ 上传失败：' + err.message + '。数据仍安全保存在本地。');
+  }
+}
+async function syncDownload(){
+  const cfg = readSyncCfg();
+  if(!cfg.url){ setSyncStatus('请先填写同步地址。'); return; }
+  try{
+    const res = await fetch(cfg.url, { headers: syncHeaders() });
+    if(!res.ok){
+      if(res.status === 404){ setSyncStatus('云端暂无数据，可点击「上传到云端」初始化。'); return; }
+      throw new Error('HTTP ' + res.status);
+    }
+    const remote = await res.json();
+    const theirs = remote.updatedAt || '', mine = state.updatedAt || '';
+    if(theirs > mine){
+      adoptRemote(remote);
+      setSyncStatus('✅ 已从云端下载并应用最新数据（云端更新于 ' + (theirs ? new Date(theirs).toLocaleString() : '无') + '）。');
+    } else {
+      setSyncStatus('本地数据不早于云端，未覆盖（云端时间：' + (theirs ? new Date(theirs).toLocaleString() : '无') + '）。');
+    }
+  }catch(err){
+    setSyncStatus('❌ 下载失败：' + err.message);
+  }
+}
+async function initialSync(){
+  const cfg = readSyncCfg();
+  if(!cfg.url || !cfg.auto) return;
+  try{
+    const res = await fetch(cfg.url, { headers: syncHeaders() });
+    if(!res.ok){
+      if(res.status === 404){ await syncUpload(); setSyncStatus('✅ 云端暂无数据，已自动上传本地数据。'); return; }
+      throw new Error('HTTP ' + res.status);
+    }
+    const remote = await res.json();
+    const theirs = remote.updatedAt || '', mine = state.updatedAt || '';
+    if(theirs > mine){
+      adoptRemote(remote);
+      setSyncStatus('✅ 已自动拉取云端最新数据。');
+    } else {
+      await syncUpload();
+      setSyncStatus('✅ 本地数据最新，已自动上传。');
+    }
+  }catch(err){
+    setSyncStatus('⚠️ 自动同步暂不可用（' + err.message + '），当前使用本地数据，联网后重试即可。');
+  }
+}
+function scheduleSync(){
+  clearTimeout(syncTimer);
+  const cfg = readSyncCfg();
+  if(!cfg.auto || !cfg.url) return;
+  syncTimer = setTimeout(syncUpload, 1500);
+}
+
+async function chooseLocalFile(){
+  if(!window.showOpenFilePicker){ setFileStatus('当前浏览器不支持文件系统 API，请使用 Chrome / Edge 最新版，或使用「导出 / 导入 JSON」备份。'); return; }
+  try{
+    const pick = await window.showOpenFilePicker({ types:[{ description:'JSON 数据文件', accept:{'application/json':['.json']} }], multiple:false });
+    fileHandle = pick[0];
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    state = normalize(JSON.parse(text));
+    save(); renderAll();
+    setFileStatus('✅ 已关联本地文件：' + fileHandle.name + '（修改后自动写入该文件）');
+  }catch(err){
+    if(err.name !== 'AbortError') setFileStatus('❌ 打开文件失败：' + err.message);
+  }
+}
+async function createLocalFile(){
+  if(!window.showSaveFilePicker){ setFileStatus('当前浏览器不支持文件系统 API，请使用 Chrome / Edge 最新版，或使用「导出 / 导入 JSON」备份。'); return; }
+  try{
+    fileHandle = await window.showSaveFilePicker({ suggestedName:'买菜成本数据.json', types:[{ description:'JSON 数据文件', accept:{'application/json':['.json']} }] });
+    await writeLocalFile();
+    setFileStatus('✅ 已创建并关联本地文件：' + fileHandle.name + '（修改后自动写入）');
+  }catch(err){
+    if(err.name !== 'AbortError') setFileStatus('❌ 创建文件失败：' + err.message);
+  }
+}
+async function writeLocalFile(){
+  if(!fileHandle) return;
+  save();
+  const w = await fileHandle.createWritable();
+  await w.write(JSON.stringify(state, null, 2));
+  await w.close();
+}
+function scheduleFileSave(){
+  clearTimeout(fileSaveTimer);
+  if(!fileHandle) return;
+  fileSaveTimer = setTimeout(writeLocalFile, 800);
+}
+
+/* ================= 汇总渲染与初始化 ================= */
+function recalc(){ markDataChanged(); refreshComputed(); save(); scheduleFileSave(); scheduleSync(); }
+function renderAll(){
+  document.getElementById('setExpectedOrders').value = state.settings.expectedDailyOrders;
+  document.getElementById('eqStockBudget').value = state.settings.initialStockBudget;
+  document.getElementById('syncUrl').value = state.settings.syncUrl || '';
+  document.getElementById('syncToken').value = state.settings.syncToken || '';
+  document.getElementById('syncAuto').checked = !!state.settings.syncAuto;
+  setFileStatus(fileHandle ? ('✅ 已关联本地文件：' + fileHandle.name + '（修改后自动写入）') : '未关联本地文件（数据现保存在浏览器 localStorage）');
+  const v = state.venue;
+  ['shopArea','shopRent','shopProperty','shopUtilities','homeArea','homeCost','homeProperty','homeUtilities','otherFixed','businessDays','renovationTotal','renovationMonths'].forEach(k => {
+    document.getElementById('v-' + k).value = v[k];
+  });
+  const d = state.delivery;
+  document.querySelector('input[name="deliveryMode"][value="' + d.mode + '"]').checked = true;
+  ['platform','commissionRate','perOrderFee','orderAmountPreview','riderSalary','packagingFee','vehicleDepreciation'].forEach(k => {
+    document.getElementById('del-' + k).value = d[k];
+  });
+  document.getElementById('dataStats').innerHTML = [
+    { l:'食材种类', v: state.ingredients.length + ' 种' },
+    { l:'菜品数量', v: state.dishes.length + ' 道' },
+    { l:'员工岗位', v: state.staff.length + ' 个' },
+    { l:'设备条目', v: state.equipment.length + ' 项' },
+    { l:'预计日均出餐', v: state.settings.expectedDailyOrders + ' 份' },
+    { l:'营业天数', v: state.venue.businessDays + ' 天/月' }
+  ].map(x => `<div class="item"><div class="l">${x.l}</div><div class="v">${x.v}</div></div>`).join('');
+  renderIngredients(); renderStaff(); renderDishes(); renderEquipment();
+  refreshComputed();
+}
+function populateFilters(){
+  const c1 = document.getElementById('filterCat1');
+  c1.innerHTML = '<option value="">全部一级分类</option>' + Object.keys(CATS).map(c => `<option>${c}</option>`).join('');
+  c1.addEventListener('change', () => {
+    const c2 = document.getElementById('filterCat2');
+    c2.innerHTML = '<option value="">全部二级分类</option>' + (CATS[c1.value] || []).map(c => `<option>${c}</option>`).join('');
+    renderIngredients();
+  });
+  document.getElementById('filterCat2').addEventListener('change', renderIngredients);
+  document.getElementById('ingSearch').addEventListener('input', renderIngredients);
+}
+function init(){
+  populateFilters();
+  document.getElementById('syncUrl').addEventListener('input', writeSyncCfg);
+  document.getElementById('syncToken').addEventListener('input', writeSyncCfg);
+  document.getElementById('syncAuto').addEventListener('change', writeSyncCfg);
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + btn.dataset.tab));
+      if(btn.dataset.tab === 'dashboard'){ updateDashboard(); drawPie(); }
+      if(history.replaceState) history.replaceState(null, '', '#' + btn.dataset.tab);
+    });
+  });
+  const hash = (location.hash || '').replace('#','');
+  if(hash){
+    const btn = document.querySelector('.tab-btn[data-tab="' + hash + '"]');
+    if(btn) btn.click();
+  }
+  window.addEventListener('resize', debounce(drawPie, 200));
+  renderAll();
+  setTimeout(() => { if(state.settings.syncAuto && state.settings.syncUrl) initialSync(); }, 600);
+}
+init();
+</script>
+</body>
+</html>
