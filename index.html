@@ -435,7 +435,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
         </div>
       </div>
       <div class="toolbar" style="margin-top:12px">
-        <button class="btn primary" onclick="syncUpload()">⬆️ 上传到云端</button>
+        <button class="btn primary" onclick="syncUpload(true)">⬆️ 上传到云端</button>
         <button class="btn ghost" onclick="syncDownload()">⬇️ 从云端下载</button>
       </div>
       <p class="muted" id="syncStatus">填写同步地址后可上传/下载；开启自动同步后，各设备数据自动保持一致。</p>
@@ -497,6 +497,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
       <p><b>数据保存在哪里？</b> 保存在当前浏览器的 localStorage。更换浏览器或电脑前，请在「数据管理」页导出 JSON 备份，换环境后导入即可。</p>
       <p><b>怎么在手机上 / 另一台电脑上继续用？</b> 分两步：① 把本 HTML 文件部署到免费静态托管（GitHub Pages、Netlify Drop、Vercel 均可直接拖入发布），手机浏览器打开网址即可使用；② 在「数据管理 → 数据同步」填写同一个同步地址并开启自动同步，各设备修改后自动互通，断网时仍用本地数据、联网后自动对齐。</p>
       <p><b>同步地址从哪里来？</b> 推荐用你自己的 GitHub 仓库（永久免费，数据完全归你）：① 在「数据管理 → 数据同步」选择「GitHub 私有仓库」；② 仓库填「用户名/仓库名」（如 xt4nrjppw4-netizen/buycai-data），文件路径 data.json，分支 main；③ 生成访问令牌：登录 github.com → 头像 → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token → 勾选 <b>repo</b> 权限 → Generate token，复制 ghp_... 填入「访问令牌」（令牌只保存在浏览器本地，只此一次显示，请自己保管好）；④ 点「上传到云端」即可。之后随时打开 <code>https://github.com/用户名/仓库名/blob/main/data.json</code> 就能看到并下载云端数据。也可改用任何支持 GET / PUT 返回 JSON 的第三方接口（jsonblob.com 等）。</p>
+      <p><b>两台设备同时改数据会打架吗？</b> 不会，有防覆盖保护：手动点「上传到云端」时，若云端比本地新，会先弹窗确认再决定是否覆盖；两台设备同时上传时，后到的那台会检测到冲突——云端更新则自动停下并提示你，本地更新则自动重试覆盖。绝不会静默丢数据。若真遇到两边都改了，让改得晚的那台先上传，另一台刷新（F5）后自动下载即可。</p>
       <p><b>想直接改磁盘上的文件怎么办？</b> 用 Chrome / Edge 打开页面，在「数据管理 → 本地文件」点击「关联已有本地文件」或「新建本地数据文件」，之后每次修改都会自动写入该 JSON 文件；该文件可随时复制、备份或传到其他设备。</p>
       <p><b>为什么米饭、豆浆等低价菜品净利为负？</b> 分摊成本按「出餐份数」均摊全部固定成本，低客单引流款会被摊高成本。这是该口径下的真实结果，可通过调价、提升出餐量或改按售价比例分摊来调整经营策略。</p>
       <p><b>修改食材单价后菜品成本会变吗？</b> 会。所有输入实时联动：改单价、净料率、用量、固定成本、配送参数，菜品成本、毛利、看板全部自动刷新。</p>
@@ -1359,20 +1360,51 @@ function adoptRemote(remote){
   if(keep.auto) state.settings.syncAuto = keep.auto;
   save(); renderAll();
 }
-async function ghUpload(cfg){
+async function ghUpload(cfg, opts){
+  opts = opts || {};
   const url = ghContentsUrl(cfg);
-  let sha = null;
+  let sha = null, remote = null;
   const res = await fetch(url, { headers: ghHeaders() });
   if(res.ok){
     const meta = await res.json();
     sha = meta.sha;
+    try{ remote = JSON.parse(d64utf8(meta.content)); }catch(e){}
   } else if(res.status !== 404){
     throw new Error('读取云端文件失败 HTTP ' + res.status);
+  }
+  const mine = state.updatedAt || '';
+  const theirs = (remote && remote.updatedAt) || '';
+  // 手动上传时的防覆盖保护：云端比本地新 → 先确认
+  if(opts.manual && theirs && theirs > mine){
+    if(!confirm('⚠️ 云端数据比本地新（云端更新于 ' + new Date(theirs).toLocaleString() + '）。\n确定要用本地数据覆盖云端吗？')){
+      setSyncStatus('已取消上传，云端数据保持原样（云端更新于 ' + new Date(theirs).toLocaleString() + '）。');
+      return 'aborted';
+    }
   }
   const body = { message:'餐谋数据同步 ' + new Date().toLocaleString('zh-CN'), content: b64utf8(JSON.stringify(state, null, 2)), branch: cfg.branch };
   if(sha) body.sha = sha;
   const up = await fetch(url.split('?')[0], { method:'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
   if(!up.ok){
+    // 并发冲突：云端刚被其他设备更新（sha 不匹配）
+    if(up.status === 409 || up.status === 422){
+      const res2 = await fetch(url, { headers: ghHeaders() });
+      if(res2.ok){
+        const meta2 = await res2.json();
+        let remote2 = null;
+        try{ remote2 = JSON.parse(d64utf8(meta2.content)); }catch(e){}
+        const theirs2 = (remote2 && remote2.updatedAt) || '';
+        if(theirs2 && theirs2 > mine){
+          setSyncStatus('⚠️ 检测到云端刚被其他设备更新（' + new Date(theirs2).toLocaleString() + '），为避免覆盖已停止上传。请刷新查看云端数据。');
+          return 'conflict';
+        }
+        // 本地确实更新：用最新 sha 重试一次覆盖
+        body.sha = meta2.sha;
+        const up2 = await fetch(url.split('?')[0], { method:'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+        if(!up2.ok){ let d=''; try{ d='：'+(await up2.json()).message; }catch(e){} throw new Error('HTTP ' + up2.status + d); }
+        setSyncStatus('✅ 已于 ' + new Date().toLocaleTimeString() + ' 上传到 GitHub（检测到云端有更新，本地较新已覆盖）');
+        return 'ok';
+      }
+    }
     let detail = '';
     try{ const e = await up.json(); detail = '：' + (e.message || ''); }catch(e2){}
     throw new Error('HTTP ' + up.status + detail);
@@ -1392,7 +1424,7 @@ async function ghDownload(cfg){
     throw new Error('云端数据解析失败：' + err.message);
   }
 }
-async function syncUpload(){
+async function syncUpload(manual){
   const cfg = readSyncCfg();
   if(cfg.mode === 'github'){
     if(!cfg.repo){ setSyncStatus('请先填写 GitHub 仓库（用户名/仓库名）。'); return; }
@@ -1402,7 +1434,23 @@ async function syncUpload(){
   }
   try{
     save();
-    if(cfg.mode === 'github'){ await ghUpload(cfg); return; }
+    if(cfg.mode === 'github'){ await ghUpload(cfg, { manual: !!manual }); return; }
+    // 通用 JSON 接口模式：手动上传前先检查云端是否更新
+    if(manual){
+      try{
+        const chk = await fetch(cfg.url, { headers: syncHeaders() });
+        if(chk.ok){
+          const remote = await chk.json();
+          const theirs = remote.updatedAt || '', mine = state.updatedAt || '';
+          if(theirs && theirs > mine){
+            if(!confirm('⚠️ 云端数据比本地新（云端更新于 ' + new Date(theirs).toLocaleString() + '）。\n确定要用本地数据覆盖云端吗？')){
+              setSyncStatus('已取消上传，云端数据保持原样。');
+              return;
+            }
+          }
+        }
+      }catch(e){}
+    }
     const res = await fetch(cfg.url, { method:'PUT', headers: syncHeaders(), body: JSON.stringify(state) });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     setSyncStatus('✅ 已于 ' + new Date().toLocaleTimeString() + ' 上传到云端（' + cfg.url + '）');
