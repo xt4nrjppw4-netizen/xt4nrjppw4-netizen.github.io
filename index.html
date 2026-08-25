@@ -386,7 +386,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
           <div class="field"><label>时间</label><input id="ord-time" type="time"></div>
           <div class="field"><label>渠道</label>
             <select id="ord-channel">
-              <option>堂食</option><option>外卖</option><option>自提</option><option>团购</option><option>其他</option>
+              <option>堂食</option><option>外卖</option><option>自提</option><option>团购</option><option>小程序</option><option>其他</option>
             </select>
           </div>
           <div class="field"><label>订单金额（元）</label><input id="ord-amount" type="number" min="0" step="0.01" placeholder="如 68.00"></div>
@@ -419,7 +419,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
         <label style="white-space:nowrap">从</label><input id="ord-from" type="date">
         <label style="white-space:nowrap">至</label><input id="ord-to" type="date">
         <select id="ord-filterChannel">
-          <option value="">全部渠道</option><option>堂食</option><option>外卖</option><option>自提</option><option>团购</option><option>其他</option>
+          <option value="">全部渠道</option><option>堂食</option><option>外卖</option><option>自提</option><option>团购</option><option>小程序</option><option>其他</option>
         </select>
         <button class="btn ghost" onclick="resetOrderFilter()">本月</button>
         <span class="muted" id="ord-filter-sum"></span>
@@ -713,7 +713,7 @@ const SAMPLE_DISHES = [
 ];
 
 /* 订单示例数据（按今天往前 30 天自动生成，打开即可看到收入趋势） */
-const ORDER_CHANNELS = ['堂食','外卖','自提','团购','其他'];
+const ORDER_CHANNELS = ['堂食','外卖','自提','团购','小程序','其他'];
 function pad2(n){ return String(n).padStart(2,'0'); }
 function dateStr(d){ return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()); }
 function sampleOrders(){
