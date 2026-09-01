@@ -639,6 +639,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
       <p><b>数据保存在哪里？</b> 保存在当前浏览器的 localStorage。更换浏览器或电脑前，请在「数据管理」页导出 JSON 备份，换环境后导入即可。</p>
       <p><b>怎么在手机上 / 另一台电脑上继续用？</b> 分两步：① 把本 HTML 文件部署到免费静态托管（GitHub Pages、Netlify Drop、Vercel 均可直接拖入发布），手机浏览器打开网址即可使用；② 在「数据管理 → 数据同步」填写同一个同步地址并开启自动同步，各设备修改后自动互通，断网时仍用本地数据、联网后自动对齐。</p>
       <p><b>同步地址从哪里来？</b> 推荐用你自己的 GitHub 仓库（永久免费，数据完全归你）：① 在「数据管理 → 数据同步」选择「GitHub 私有仓库」；② 仓库填「用户名/仓库名」（如 xt4nrjppw4-netizen/buycai-data），文件路径 data.json，分支 main；③ 生成访问令牌：登录 github.com → 头像 → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token → 勾选 <b>repo</b> 权限 → Generate token，复制 ghp_... 填入「访问令牌」（令牌只保存在浏览器本地，只此一次显示，请自己保管好）；④ 点「上传到云端」即可。之后随时打开 <code>https://github.com/用户名/仓库名/blob/main/data.json</code> 就能看到并下载云端数据。也可改用任何支持 GET / PUT 返回 JSON 的第三方接口（jsonblob.com 等）。</p>
+      <p><b>换了新的访问令牌怎么办？</b> 在锁屏页点「忘记令牌？重置锁屏」，确认后输入新令牌即可解锁，数据不受影响；解锁后请同步在「数据同步」里确认令牌已更新。</p>
       <p><b>两台设备同时改数据会打架吗？</b> 不会，有防覆盖保护：手动点「上传到云端」时，若云端比本地新，会先弹窗确认再决定是否覆盖；两台设备同时上传时，后到的那台会检测到冲突——云端更新则自动停下并提示你，本地更新则自动重试覆盖。绝不会静默丢数据。若真遇到两边都改了，让改得晚的那台先上传，另一台刷新（F5）后自动下载即可。</p>
       <p><b>想直接改磁盘上的文件怎么办？</b> 用 Chrome / Edge 打开页面，在「数据管理 → 本地文件」点击「关联已有本地文件」或「新建本地数据文件」，之后每次修改都会自动写入该 JSON 文件；该文件可随时复制、备份或传到其他设备。</p>
       <p><b>为什么米饭、豆浆等低价菜品净利为负？</b> 分摊成本按「出餐份数」均摊全部固定成本，低客单引流款会被摊高成本。这是该口径下的真实结果，可通过调价、提升出餐量或改按售价比例分摊来调整经营策略。</p>
@@ -660,6 +661,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
     <button class="btn primary" style="width:100%" onclick="unlockApp()">🔓 解锁</button>
     <p class="lock-msg" id="lockMsg"></p>
     <p class="lock-tip" id="lockTip"></p>
+    <button class="btn ghost" style="width:100%;margin-top:10px" onclick="resetLock()">🔑 忘记令牌？重置锁屏</button>
   </div>
 </div>
 <style>
@@ -2149,6 +2151,14 @@ function lockApp(){
   __unlocked = false;
   showLockScreen();
   if(history.replaceState) history.replaceState(null, '', '#dashboard');
+}
+function resetLock(){
+  if(!confirm('确定重置锁屏？\n\n本机保存的旧令牌会被清除，之后输入新令牌即可解锁，数据不会丢失。')) return;
+  state.settings.syncToken = '';
+  save();
+  document.getElementById('lockToken').value = '';
+  showLockScreen();
+  document.getElementById('lockToken').focus();
 }
 
 /* ================= 每月购买清单 ================= */
