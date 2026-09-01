@@ -133,6 +133,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
     <button class="tab-btn" data-tab="delivery">🛵 配送成本</button>
     <button class="tab-btn" data-tab="dishes">🍽️ 菜品定价</button>
     <button class="tab-btn" data-tab="orders">🧾 订单管理</button>
+    <button class="tab-btn" data-tab="supplies">📦 每月采购</button>
     <button class="tab-btn" data-tab="equipment">🍳 厨房设备</button>
     <button class="tab-btn" data-tab="data">💾 数据管理</button>
     <button class="tab-btn" data-tab="help">📖 使用说明</button>
@@ -151,7 +152,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
       <div class="card kpi">
         <div class="label">📌 月固定成本</div>
         <div class="value" id="kpi-fixed">¥0</div>
-        <div class="sub" id="kpi-fixed-sub">场地 + 人力 + 折旧</div>
+        <div class="sub" id="kpi-fixed-sub">场地 + 人力 + 折旧 + 耗材</div>
       </div>
       <div class="card kpi">
         <div class="label">⚖️ 盈亏平衡点（日营业额）</div>
@@ -391,6 +392,7 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
           </div>
           <div class="field"><label>订单金额（元）</label><input id="ord-amount" type="number" min="0" step="0.01" placeholder="如 68.00"></div>
           <div class="field"><label>份数 / 人数</label><input id="ord-qty" type="number" min="1" step="1" value="1"></div>
+          <div class="field"><label>额外筷子（双）</label><input id="ord-extra" type="number" min="0" step="1" value="0"></div>
           <div class="field" style="grid-column:span 2"><label>备注</label><input id="ord-note" placeholder="可选，如 3 号桌 / 美团 22 号 / 双人餐"></div>
         </div>
         <div class="toolbar" style="margin-top:12px">
@@ -426,13 +428,68 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
       </div>
       <div class="table-wrap">
         <table class="data" style="min-width:760px">
-          <thead><tr><th>日期</th><th>时间</th><th>渠道</th><th>金额</th><th>份数</th><th>备注</th><th>操作</th></tr></thead>
+          <thead><tr><th>日期</th><th>时间</th><th>渠道</th><th>金额</th><th>份数</th><th>额外筷</th><th>备注</th><th>操作</th></tr></thead>
           <tbody id="ordBody"></tbody>
         </table>
       </div>
     </div>
   </section>
 
+  <!-- ============ 每月购买清单 ============ -->
+  <section id="tab-supplies" class="tab">
+    <div class="card">
+      <h2>📦 每月购买清单（耗材成本）</h2>
+      <div class="note">记录每月固定采购的耗材（筷子、纸巾、打包盒等）。月成本 = 单价 × 月购买量，清单总额已自动计入「月固定成本」，盈亏平衡点和利润同步更新。</div>
+      <div class="toolbar">
+        <button class="btn primary" onclick="addSupply()">＋ 添加耗材</button>
+        <span class="muted" id="supCount"></span>
+      </div>
+      <div class="table-wrap">
+        <table class="data" style="min-width:840px">
+          <thead><tr><th>名称</th><th>分类</th><th>单位</th><th>单价(元)</th><th>月购买量</th><th>月成本</th><th>备注</th><th></th></tr></thead>
+          <tbody id="supBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h2>🥢 筷子成本控制</h2>
+        <div class="form-grid">
+          <div class="field"><label>筷子单价（元/双）</label><input id="cp-unitPrice" type="number" min="0" step="0.01"></div>
+          <div class="field"><label>每份出餐默认筷数</label><input id="cp-perDish" type="number" min="0" step="1"></div>
+          <div class="field" style="grid-column:span 2">
+            <label class="btn ghost" style="display:flex;align-items:center;gap:8px;cursor:pointer;width:100%;justify-content:center">
+              <input type="checkbox" id="cp-auto" style="width:auto;margin:0"> 按订单自动统计（推荐：出餐份数 = 订单份数合计，额外筷 = 订单额外筷合计）
+            </label>
+          </div>
+          <div id="cp-manual-block" class="form-grid" style="grid-column:span 2;grid-template-columns:1fr 1fr;display:none">
+            <div class="field"><label>本月出餐份数（手动）</label><input id="cp-manualDishes" type="number" min="0"></div>
+            <div class="field"><label>本月额外筷数（手动）</label><input id="cp-manualExtra" type="number" min="0"></div>
+          </div>
+        </div>
+        <div class="grid-3" style="margin-top:14px">
+          <div class="stat"><label>本月出餐份数</label><div class="big" id="cp-dishes">0 份</div></div>
+          <div class="stat"><label>额外筷数</label><div class="big" id="cp-extra">0 双</div></div>
+          <div class="stat"><label>预计用筷</label><div class="big accent" id="cp-total">0 双</div></div>
+          <div class="stat"><label>预计筷子成本</label><div class="big" id="cp-cost">¥0.00</div></div>
+          <div class="stat"><label>每份分摊</label><div class="big" id="cp-perserve">¥0.00</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>📊 本月耗材汇总</h2>
+        <div class="grid-3">
+          <div class="stat"><label>清单月总额</label><div class="big accent" id="sup-total">¥0</div></div>
+          <div class="stat"><label>清单条目</label><div class="big" id="sup-count2">0 项</div></div>
+        </div>
+        <div class="grid-3" style="margin-top:14px">
+          <div class="stat"><label>筷子购买量（清单中「筷」条目）</label><div class="big" id="cp-purchased">—</div></div>
+          <div class="stat"><label>购买 vs 用量</label><div class="big" id="cp-balance">—</div></div>
+        </div>
+        <p class="muted" style="margin-top:12px">「购买 vs 用量」= 清单中筷子的月购买量 − 预计用筷：余为正说明够用（可能囤货），缺为负说明要补货。顾客每多要一双，这里都会自动体现。</p>
+      </div>
+    </div>
+  </section>
   <!-- ============ 厨房设备 ============ -->
   <section id="tab-equipment" class="tab">
     <div class="card">
@@ -757,12 +814,26 @@ function sampleOrders(){
       const hh = 10 + ((i * 3 + d) % 10);
       const mm = (i * 17 + d * 7) % 60;
       const amt = Math.round((38 + ((d * 7 + i * 13) % 90) + ((d + i) % 3) * 12) * 100) / 100;
-      out.push({ id:'so' + d + '-' + i, date: ds, time: pad2(hh) + ':' + pad2(mm), channel: ORDER_CHANNELS[i % ORDER_CHANNELS.length], amount: amt, qty: 1 + (i % 2), note: d % 5 === 0 ? '示例订单' : '' });
+      out.push({ id:'so' + d + '-' + i, date: ds, time: pad2(hh) + ':' + pad2(mm), channel: ORDER_CHANNELS[i % ORDER_CHANNELS.length], amount: amt, qty: 1 + (i % 2), extraChopsticks: (i % 3 === 0 ? 1 : 0), note: d % 5 === 0 ? '示例订单' : '' });
     }
   }
   return out;
 }
 const SAMPLE_ORDERS = sampleOrders();
+
+/* 每月购买清单示例 */
+const SUPPLY_CATS = ['一次性餐具','清洁用品','打包耗材','厨房杂项','办公杂项','其他'];
+const SUPPLY = (id,name,category,unit,unitPrice,monthlyQty,note) => ({id,name,category,unit,unitPrice,monthlyQty,note:note||''});
+const SAMPLE_SUPPLIES = [
+  SUPPLY('sp1','一次性筷子','一次性餐具','双',0.05,1800,'按出餐量自动估算'),
+  SUPPLY('sp2','餐巾纸','一次性餐具','包',3.5,120,''),
+  SUPPLY('sp3','打包盒 750ml','打包耗材','个',0.45,400,''),
+  SUPPLY('sp4','打包袋','打包耗材','个',0.12,500,''),
+  SUPPLY('sp5','保鲜膜','厨房杂项','卷',8,6,''),
+  SUPPLY('sp6','洗洁精','清洁用品','瓶',12,4,''),
+  SUPPLY('sp7','垃圾袋','清洁用品','卷',5,8,''),
+  SUPPLY('sp8','厨房用纸','清洁用品','卷',9,5,'')
+];
 
 const DEFAULT_STATE = {
   ingredients: SAMPLE_INGREDIENTS,
@@ -789,6 +860,8 @@ const DEFAULT_STATE = {
     EQ('e10','排烟风机','其他',1,3500,5)
   ],
   orders: SAMPLE_ORDERS,
+  supplies: SAMPLE_SUPPLIES,
+  chopsticks: { unitPrice:0.05, perDish:1, auto:true, manualDishes:0, manualExtra:0 },
   settings: { appLock:true, expectedDailyOrders:300, initialStockBudget:5000, syncMode:'github', syncUrl:'', syncToken:'', syncRepo:'xt4nrjppw4-netizen/buycai-data', syncPath:'data.json', syncBranch:'main', syncAuto:false }
 };
 
@@ -807,8 +880,9 @@ function normalize(s){
   out.delivery = Object.assign({}, d.delivery, (s && s.delivery) || {});
   const rawSet = (s && s.settings) || {};
   out.settings = Object.assign({}, d.settings, rawSet);
+  out.chopsticks = Object.assign({}, d.chopsticks, (s && s.chopsticks) || {});
   if(rawSet.syncMode == null) out.settings.syncMode = rawSet.syncUrl ? 'url' : 'github';
-  ['ingredients','dishes','staff','equipment','orders'].forEach(k => { if(!Array.isArray(out[k])) out[k] = []; });
+  ['ingredients','dishes','staff','equipment','orders','supplies'].forEach(k => { if(!Array.isArray(out[k])) out[k] = []; });
   return out;
 }
 function loadState(){
@@ -821,7 +895,7 @@ function loadState(){
 function save(){ try{ state.savedAt = new Date().toISOString(); localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
 function markDataChanged(){ state.updatedAt = new Date().toISOString(); }
 function emptyState(){
-  return { ingredients:[], dishes:[], venue:clone(DEFAULT_STATE.venue), staff:[], delivery:clone(DEFAULT_STATE.delivery), equipment:[], orders:[], settings:clone(DEFAULT_STATE.settings) };
+  return { ingredients:[], dishes:[], venue:clone(DEFAULT_STATE.venue), staff:[], delivery:clone(DEFAULT_STATE.delivery), equipment:[], orders:[], supplies:[], chopsticks:clone(DEFAULT_STATE.chopsticks), settings:clone(DEFAULT_STATE.settings) };
 }
 let state = loadState();
 
@@ -876,7 +950,7 @@ function dishTotalCost(dish){ return dishIngCost(dish) + sharedCostPerPortion() 
 function grossMargin(dish){ const p = +dish.price||0; return p > 0 ? (p - dishIngCost(dish)) / p : 0; }
 function netMargin(dish){ const p = +dish.price||0; return p > 0 ? (p - dishTotalCost(dish)) / p : 0; }
 function monthlyFixedCost(){
-  let f = monthlyVenueCost() + monthlyLabor() + equipmentMonthlyDep();
+  let f = monthlyVenueCost() + monthlyLabor() + equipmentMonthlyDep() + suppliesMonthlyCost();
   if(state.delivery.mode === 'self') f += selfFixedCost();
   return f;
 }
@@ -917,7 +991,8 @@ function pieData(){
     { label:'食材成本', value:food, color:'#2563eb' },
     { label:'人力成本', value:monthlyLabor(), color:'#f59e0b' },
     { label:'场地成本', value:monthlyVenueCost(), color:'#0d9488' },
-    { label:'其他（配送+设备折旧）', value:delivery + equipmentMonthlyDep(), color:'#8b5cf6' }
+    { label:'其他（配送+设备折旧）', value:delivery + equipmentMonthlyDep(), color:'#8b5cf6' },
+    { label:'耗材（购买清单）', value:suppliesMonthlyCost(), color:'#ec4899' }
   ];
 }
 
@@ -1300,7 +1375,7 @@ function updateDashboard(){
   setText('kpi-invest', money0(invest));
   setText('kpi-invest-sub', `设备 ${money0(equipmentTotalInvest())} · 装修 ${money0(+state.venue.renovationTotal||0)} · 首批食材 ${money0(+state.settings.initialStockBudget||0)}`);
   setText('kpi-fixed', money0(fixed));
-  setText('kpi-fixed-sub', `场地 ${money0(monthlyVenueCost())} + 人力 ${money0(monthlyLabor())} + 折旧 ${money0(equipmentMonthlyDep())}${state.delivery.mode==='self' ? ' + 配送固定 ' + money0(selfFixedCost()) : ''}`);
+  setText('kpi-fixed-sub', `场地 ${money0(monthlyVenueCost())} + 人力 ${money0(monthlyLabor())} + 折旧 ${money0(equipmentMonthlyDep())} + 耗材 ${money0(suppliesMonthlyCost())}${state.delivery.mode==='self' ? ' + 配送固定 ' + money0(selfFixedCost()) : ''}`);
   setText('kpi-breakeven', money0(be));
   setText('kpi-breakeven-sub', `综合毛利率 ${pct1(wgm)} · 营业 ${days} 天/月`);
   setText('kpi-revenue', money0(rev));
@@ -1761,6 +1836,7 @@ function renderAll(){
     { l:'食材种类', v: state.ingredients.length + ' 种' },
     { l:'菜品数量', v: state.dishes.length + ' 道' },
     { l:'订单笔数', v: (state.orders || []).length + ' 笔' },
+    { l:'耗材条目', v: (state.supplies || []).length + ' 项' },
     { l:'员工岗位', v: state.staff.length + ' 个' },
     { l:'设备条目', v: state.equipment.length + ' 项' },
     { l:'预计日均出餐', v: state.settings.expectedDailyOrders + ' 份' },
@@ -1768,6 +1844,7 @@ function renderAll(){
   ].map(x => `<div class="item"><div class="l">${x.l}</div><div class="v">${x.v}</div></div>`).join('');
   renderIngredients(); renderStaff(); renderDishes(); renderEquipment();
   renderOrderStats(); renderOrders(); drawOrderTrend(); drawOrderChannel();
+  renderSupplies(); renderChopsticks();
   refreshComputed();
 }
 function populateFilters(){
@@ -1857,20 +1934,22 @@ function renderOrders(){
         <td>${esc(o.time || '')}</td>
         <td>${esc(o.channel || '')}</td>
         <td class="num pos">${money(+o.amount||0)}</td>
-        <td class="num">${+o.qty||1}</td>
+        <td class="num"></td>
+        <td class="num"></td>
         <td>${esc(o.note || '')}</td>
         <td>
           <button class="btn icon" onclick="editOrder('${o.id}')" title="编辑">✏️</button>
           <button class="btn icon danger" onclick="delOrder('${o.id}')" title="删除">✕</button>
         </td>
       </tr>`).join('')
-    : '<tr><td colspan="7" class="muted">暂无订单，用左侧表单添加一笔试试（默认日期就是今天）。</td></tr>';
+    : '<tr><td colspan="8" class="muted">暂无订单，用左侧表单添加一笔试试（默认日期就是今天）。</td></tr>';
 }
 function initOrderForm(){
   document.getElementById('ord-date').value = todayStr2();
   document.getElementById('ord-time').value = nowTimeStr();
   document.getElementById('ord-amount').value = '';
   document.getElementById('ord-qty').value = '1';
+  document.getElementById('ord-extra').value = '0';
   document.getElementById('ord-note').value = '';
   orderEditId = null;
   setText('ord-form-status', '');
@@ -1882,14 +1961,15 @@ function saveOrder(){
   const channel = document.getElementById('ord-channel').value;
   const amount = parseFloat(document.getElementById('ord-amount').value);
   const qty = parseInt(document.getElementById('ord-qty').value, 10) || 1;
+  const extraChopsticks = parseInt(document.getElementById('ord-extra').value, 10) || 0;
   const note = document.getElementById('ord-note').value.trim();
   if(!date){ setText('ord-form-status','⚠️ 请选择日期。'); return; }
   if(!(amount > 0)){ setText('ord-form-status','⚠️ 请填写大于 0 的订单金额。'); return; }
   if(orderEditId){
     const o = (state.orders || []).find(x => x.id === orderEditId);
-    if(o){ o.date = date; o.time = time; o.channel = channel; o.amount = amount; o.qty = qty; o.note = note; }
+    if(o){ o.date = date; o.time = time; o.channel = channel; o.amount = amount; o.qty = qty; o.extraChopsticks = extraChopsticks; o.note = note; }
   } else {
-    (state.orders || (state.orders = [])).push({ id:uid('o'), date, time, channel, amount, qty, note });
+    (state.orders || (state.orders = [])).push({ id:uid('o'), date, time, channel, amount, qty, extraChopsticks, note });
   }
   markDataChanged(); save(); renderAll();
   scheduleSync();
@@ -1905,6 +1985,7 @@ function editOrder(id){
   document.getElementById('ord-channel').value = o.channel || '堂食';
   document.getElementById('ord-amount').value = o.amount != null ? o.amount : '';
   document.getElementById('ord-qty').value = o.qty || 1;
+  document.getElementById('ord-extra').value = o.extraChopsticks || 0;
   document.getElementById('ord-note').value = o.note || '';
   setText('ord-form-status', '✏️ 正在编辑 ' + (o.date||'') + ' ' + (o.time||'') + ' 的订单，改完点「保存订单」。');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1936,7 +2017,7 @@ function addSampleOrders(days){
       const hh = 10 + ((i * 3 + d) % 10);
       const mm = (i * 17 + d * 7) % 60;
       const amt = Math.round((38 + ((d * 7 + i * 13) % 90) + ((d + i) % 3) * 12) * 100) / 100;
-      orders.push({ id: uid('o'), date: ds, time: pad2(hh) + ':' + pad2(mm), channel: ORDER_CHANNELS[i % ORDER_CHANNELS.length], amount: amt, qty: 1 + (i % 2), note: d % 5 === 0 ? '示例订单' : '' });
+      orders.push({ id: uid('o'), date: ds, time: pad2(hh) + ':' + pad2(mm), channel: ORDER_CHANNELS[i % ORDER_CHANNELS.length], amount: amt, qty: 1 + (i % 2), extraChopsticks: (i % 3 === 0 ? 1 : 0), note: d % 5 === 0 ? '示例订单' : '' });
     }
   }
   markDataChanged(); save(); renderAll(); scheduleSync();
@@ -2070,6 +2151,105 @@ function lockApp(){
   if(history.replaceState) history.replaceState(null, '', '#dashboard');
 }
 
+/* ================= 每月购买清单 ================= */
+function suppliesMonthlyCost(){ return (state.supplies || []).reduce((s,x) => s + (+x.unitPrice||0) * (+x.monthlyQty||0), 0); }
+function chopstickUsage(){
+  const c = state.chopsticks || {};
+  const auto = c.auto !== false;
+  let dishes = 0, extra = 0;
+  if(auto){
+    (state.orders || []).forEach(o => { dishes += +o.qty || 1; extra += +o.extraChopsticks || 0; });
+  } else {
+    dishes = +c.manualDishes || 0; extra = +c.manualExtra || 0;
+  }
+  const perDish = Math.max(0, +c.perDish || 1);
+  const total = dishes * perDish + extra;
+  const unitPrice = +c.unitPrice || 0;
+  const cost = total * unitPrice;
+  const perServe = dishes > 0 ? cost / dishes : 0;
+  const chopItem = (state.supplies || []).find(x => (x.name || '').indexOf('筷') >= 0);
+  const purchased = chopItem ? (+chopItem.monthlyQty || 0) : 0;
+  return { auto, dishes, extra, perDish, total, unitPrice, cost, perServe, purchased, balance: purchased - total, hasItem: !!chopItem };
+}
+function renderSupplies(){
+  const body = document.getElementById('supBody');
+  body.innerHTML = state.supplies.map((x,idx) => {
+    const cost = (+x.unitPrice||0) * (+x.monthlyQty||0);
+    return `
+    <tr data-idx="${idx}">
+      <td><input class="c" value="${esc(x.name)}" data-f="name"></td>
+      <td><select class="c" data-f="category">${SUPPLY_CATS.map(cat => `<option ${cat===x.category?'selected':''}>${cat}</option>`).join('')}</select></td>
+      <td><input class="c" value="${esc(x.unit||'个')}" data-f="unit" style="width:64px"></td>
+      <td><input class="n" type="number" min="0" step="0.01" value="${+x.unitPrice||0}" data-f="unitPrice"></td>
+      <td><input class="n" type="number" min="0" value="${+x.monthlyQty||0}" data-f="monthlyQty"></td>
+      <td class="calc sup-cost">${money(cost)}</td>
+      <td><input class="c" value="${esc(x.note||'')}" data-f="note" style="min-width:110px"></td>
+      <td><button class="btn icon danger" onclick="delSupply(${idx})" title="删除">✕</button></td>
+    </tr>`;
+  }).join('');
+  const total = suppliesMonthlyCost();
+  setText('supCount', state.supplies.length + ' 项 · 月总额 ' + money0(total));
+  setText('sup-total', money0(total));
+  setText('sup-count2', state.supplies.length + ' 项');
+}
+function addSupply(){
+  state.supplies.push({ id:uid('sp'), name:'新耗材', category:'其他', unit:'个', unitPrice:0, monthlyQty:0, note:'' });
+  renderSupplies(); recalc();
+}
+function delSupply(idx){
+  state.supplies.splice(idx,1);
+  renderSupplies(); renderChopsticks(); recalc();
+}
+document.getElementById('supBody').addEventListener('input', e => {
+  const tr = e.target.closest('tr'); if(!tr) return;
+  const idx = +tr.dataset.idx; const x = state.supplies[idx]; if(!x) return;
+  const f = e.target.dataset.f;
+  if(f === 'name' || f === 'unit' || f === 'note') x[f] = e.target.value;
+  else if(f === 'category') x[f] = e.target.value;
+  else x[f] = Math.max(0, num(e.target));
+  const cell = tr.querySelector('.sup-cost');
+  if(cell) cell.textContent = money((+x.unitPrice||0) * (+x.monthlyQty||0));
+  const total = suppliesMonthlyCost();
+  setText('supCount', state.supplies.length + ' 项 · 月总额 ' + money0(total));
+  setText('sup-total', money0(total));
+  recalc(); renderChopsticks();
+});
+function renderChopsticks(){
+  const c = state.chopsticks || (state.chopsticks = {});
+  document.getElementById('cp-unitPrice').value = c.unitPrice != null ? c.unitPrice : 0.05;
+  document.getElementById('cp-perDish').value = c.perDish != null ? c.perDish : 1;
+  document.getElementById('cp-auto').checked = c.auto !== false;
+  document.getElementById('cp-manualDishes').value = c.manualDishes || 0;
+  document.getElementById('cp-manualExtra').value = c.manualExtra || 0;
+  const u = chopstickUsage();
+  document.getElementById('cp-manual-block').style.display = u.auto ? 'none' : '';
+  setText('cp-dishes', u.dishes + ' 份');
+  setText('cp-extra', u.extra + ' 双');
+  setText('cp-total', u.total + ' 双');
+  setText('cp-cost', money(u.cost));
+  setText('cp-perserve', money(u.perServe));
+  setText('cp-purchased', u.hasItem ? u.purchased + ' 双' : '清单中未找到「筷」条目');
+  const bl = document.getElementById('cp-balance');
+  if(u.hasItem){
+    bl.textContent = u.balance >= 0 ? '余 ' + u.balance + ' 双' : '缺 ' + (-u.balance) + ' 双';
+    bl.style.color = u.balance >= 0 ? '#16a34a' : '#dc2626';
+  } else {
+    bl.textContent = '—';
+    bl.style.color = '';
+  }
+}
+['cp-unitPrice','cp-perDish','cp-manualDishes','cp-manualExtra'].forEach(id => {
+  document.getElementById(id).addEventListener('input', e => {
+    const c = state.chopsticks || (state.chopsticks = {});
+    c[id.replace('cp-','')] = parseFloat(e.target.value) || 0;
+    recalc(); renderChopsticks();
+  });
+});
+document.getElementById('cp-auto').addEventListener('change', e => {
+  state.chopsticks.auto = e.target.checked;
+  recalc(); renderChopsticks();
+});
+
 function init(){
   populateFilters();
   initOrderForm();
@@ -2086,6 +2266,7 @@ function init(){
       document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + btn.dataset.tab));
       if(btn.dataset.tab === 'dashboard'){ updateDashboard(); drawPie(); }
       if(btn.dataset.tab === 'orders'){ renderOrderStats(); renderOrders(); drawOrderTrend(); drawOrderChannel(); }
+      if(btn.dataset.tab === 'supplies'){ renderSupplies(); renderChopsticks(); }
       if(history.replaceState) history.replaceState(null, '', '#' + btn.dataset.tab);
     });
   });
