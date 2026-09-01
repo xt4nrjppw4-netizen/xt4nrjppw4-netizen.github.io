@@ -472,7 +472,11 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
         <label class="btn ghost" style="cursor:pointer">⬆️ 导入 JSON 文件<input id="importFile" type="file" accept=".json,application/json" style="display:none"></label>
         <button class="btn ghost" onclick="resetSample()">♻️ 恢复示例数据</button>
         <button class="btn danger" onclick="clearAll()">🗑 清空全部数据</button>
+        <button class="btn ghost" onclick="lockApp()">🔒 立即锁定</button>
       </div>
+      <label class="muted" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;cursor:pointer">
+        <input type="checkbox" id="setAppLock" style="width:auto;margin:0"> 开启启动锁屏（每次打开需输入访问令牌才显示数据）
+      </label>
       <p class="muted" id="dataStatus"></p>
     </div>
     <div class="card">
@@ -588,6 +592,32 @@ footer{text-align:center;color:#94a3b8;font-size:12px;padding:0 16px 30px}
 </main>
 
 <footer>餐谋 · 数据自动保存于浏览器本地 · 建议使用 Chrome / Edge 最新版</footer>
+
+<!-- ============ 启动锁屏 ============ -->
+<div id="lockScreen" class="lock-screen">
+  <div class="lock-card">
+    <div class="lock-logo">🍳 餐谋</div>
+    <div class="lock-title">数据已锁定</div>
+    <p class="lock-hint">输入访问令牌后才会显示真实数据；关闭页面后自动重新锁定。</p>
+    <input id="lockToken" type="password" placeholder="请输入 GitHub 访问令牌（ghp_...）" autocomplete="off">
+    <button class="btn primary" style="width:100%" onclick="unlockApp()">🔓 解锁</button>
+    <p class="lock-msg" id="lockMsg"></p>
+    <p class="lock-tip" id="lockTip"></p>
+  </div>
+</div>
+<style>
+.lock-screen{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#0f172a,#134e4a);display:flex;align-items:center;justify-content:center;padding:20px}
+.lock-card{background:#fff;border-radius:18px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:32px 26px;width:100%;max-width:380px;text-align:center}
+.lock-logo{font-size:26px;font-weight:800;color:#0f766e}
+.lock-title{font-size:18px;font-weight:700;color:#0f172a;margin:10px 0 6px}
+.lock-hint{font-size:13px;color:#64748b;margin-bottom:18px;line-height:1.6}
+.lock-card input{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:14px;margin-bottom:12px;box-sizing:border-box}
+.lock-card .btn{margin-bottom:6px}
+.lock-msg{font-size:13px;min-height:18px;margin:6px 0 2px}
+.lock-msg.err{color:#dc2626}.lock-msg.ok{color:#16a34a}
+.lock-tip{font-size:12px;color:#94a3b8;line-height:1.6}
+@media (max-width:480px){.lock-card{padding:26px 18px}}
+</style>
 
 <script>
 'use strict';
@@ -759,7 +789,7 @@ const DEFAULT_STATE = {
     EQ('e10','排烟风机','其他',1,3500,5)
   ],
   orders: SAMPLE_ORDERS,
-  settings: { expectedDailyOrders:300, initialStockBudget:5000, syncMode:'github', syncUrl:'', syncToken:'', syncRepo:'xt4nrjppw4-netizen/buycai-data', syncPath:'data.json', syncBranch:'main', syncAuto:false }
+  settings: { appLock:true, expectedDailyOrders:300, initialStockBudget:5000, syncMode:'github', syncUrl:'', syncToken:'', syncRepo:'xt4nrjppw4-netizen/buycai-data', syncPath:'data.json', syncBranch:'main', syncAuto:false }
 };
 
 /* ================= 状态管理 ================= */
@@ -1416,7 +1446,7 @@ function writeSyncCfg(){
   save();
   setSyncStatus(state.settings.syncAuto ? '✅ 自动同步已开启，修改数据后约 2 秒自动上传。' : '✅ 同步设置已保存。');
 }
-function toggleSyncMode(){
+function applySyncModeUI(){
   const mode = document.getElementById('syncMode').value;
   document.getElementById('syncGithubBlock').style.display = mode === 'github' ? '' : 'none';
   document.getElementById('syncUrlBlock').style.display = mode === 'url' ? '' : 'none';
@@ -1424,6 +1454,9 @@ function toggleSyncMode(){
     ? '访问令牌（GitHub Personal Access Token，需 Contents 读写权限）'
     : '访问令牌（可选，Bearer 认证）';
   document.getElementById('syncToken').placeholder = mode === 'github' ? 'ghp_... 创建方式见使用说明' : '留空则无需认证';
+}
+function toggleSyncMode(){
+  applySyncModeUI();
   writeSyncCfg();
 }
 function setSyncStatus(msg){ const el = document.getElementById('syncStatus'); if(el) el.textContent = msg; }
@@ -1474,6 +1507,11 @@ function adoptRemote(remote){
   if(keep.auto) state.settings.syncAuto = keep.auto;
   save(); renderAll();
 }
+function stateForCloud(){
+  const c = JSON.parse(JSON.stringify(state));
+  if(c && c.settings) delete c.settings.syncToken;
+  return c;
+}
 async function ghUpload(cfg, opts){
   opts = opts || {};
   const url = ghContentsUrl(cfg);
@@ -1495,7 +1533,7 @@ async function ghUpload(cfg, opts){
       return 'aborted';
     }
   }
-  const body = { message:'餐谋数据同步 ' + new Date().toLocaleString('zh-CN'), content: b64utf8(JSON.stringify(state, null, 2)), branch: cfg.branch };
+  const body = { message:'餐谋数据同步 ' + new Date().toLocaleString('zh-CN'), content: b64utf8(JSON.stringify(stateForCloud(), null, 2)), branch: cfg.branch };
   if(sha) body.sha = sha;
   const up = await fetch(url.split('?')[0], { method:'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
   if(!up.ok){
@@ -1565,7 +1603,7 @@ async function syncUpload(manual){
         }
       }catch(e){}
     }
-    const res = await fetch(cfg.url, { method:'PUT', headers: syncHeaders(), body: JSON.stringify(state) });
+    const res = await fetch(cfg.url, { method:'PUT', headers: syncHeaders(), body: JSON.stringify(stateForCloud()) });
     if(!res.ok) throw new Error('HTTP ' + res.status);
     setSyncStatus('✅ 已于 ' + new Date().toLocaleTimeString() + ' 上传到云端（' + cfg.url + '）');
   }catch(err){
@@ -1708,6 +1746,7 @@ function renderAll(){
   document.getElementById('syncUrl').value = state.settings.syncUrl || '';
   document.getElementById('syncToken').value = state.settings.syncToken || '';
   document.getElementById('syncAuto').checked = !!state.settings.syncAuto;
+  document.getElementById('setAppLock').checked = !!state.settings.appLock;
   setFileStatus(fileHandle ? ('✅ 已关联本地文件：' + fileHandle.name + '（修改后自动写入）') : '未关联本地文件（数据现保存在浏览器 localStorage）');
   const v = state.venue;
   ['shopArea','shopRent','shopProperty','shopUtilities','homeArea','homeCost','homeProperty','homeUtilities','otherFixed','businessDays','renovationTotal','renovationMonths'].forEach(k => {
@@ -1990,14 +2029,57 @@ function resetOrderFilter(){
   renderOrders();
 }
 
+/* ================= 启动锁屏 ================= */
+let __unlocked = false;
+function isLocked(){ return !!state.settings.appLock && !__unlocked; }
+function showLockScreen(){
+  const s = document.getElementById('lockScreen');
+  if(s) s.style.display = 'flex';
+  const msg = document.getElementById('lockMsg');
+  if(msg) msg.textContent = '';
+  const tip = document.getElementById('lockTip');
+  if(tip) tip.textContent = (state.settings.syncToken || '').trim()
+    ? '提示：输入与「数据同步」中相同的访问令牌即可解锁。'
+    : '首次使用：直接输入你的 GitHub 访问令牌即可解锁，并同时用于云端同步。';
+}
+function hideLockScreen(){ const s = document.getElementById('lockScreen'); if(s) s.style.display = 'none'; }
+function unlockApp(){
+  const entered = document.getElementById('lockToken').value.trim();
+  const msg = document.getElementById('lockMsg');
+  if(!entered){ msg.textContent = '⚠️ 请输入访问令牌。'; msg.className = 'lock-msg err'; return; }
+  const stored = (state.settings.syncToken || '').trim();
+  if(stored && entered !== stored){
+    msg.textContent = '❌ 令牌不正确。'; msg.className = 'lock-msg err';
+    return;
+  }
+  if(!stored){
+    state.settings.syncToken = entered;
+    save();
+  }
+  __unlocked = true;
+  hideLockScreen();
+  initOrderForm();
+  renderAll();
+  const cfg = readSyncCfg();
+  if(cfg.auto && ((cfg.mode === 'github' && cfg.repo) || (cfg.mode === 'url' && cfg.url))) initialSync();
+  else setText('dataStatus', '✅ 已解锁。可在「数据同步」配置云端同步。');
+}
+function lockApp(){
+  __unlocked = false;
+  showLockScreen();
+  if(history.replaceState) history.replaceState(null, '', '#dashboard');
+}
+
 function init(){
   populateFilters();
   initOrderForm();
   document.getElementById('syncMode').addEventListener('change', toggleSyncMode);
   ['syncUrl','syncToken','syncRepo','syncPath','syncBranch'].forEach(id => document.getElementById(id).addEventListener('input', writeSyncCfg));
   document.getElementById('syncAuto').addEventListener('change', writeSyncCfg);
+  document.getElementById('setAppLock').addEventListener('change', () => { state.settings.appLock = document.getElementById('setAppLock').checked; save(); setText('dataStatus', state.settings.appLock ? '✅ 已开启启动锁屏：下次打开需输入访问令牌。' : '✅ 已关闭启动锁屏。'); });
+  document.getElementById('lockToken').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); unlockApp(); } });
   document.getElementById('syncMode').value = state.settings.syncMode === 'url' ? 'url' : 'github';
-  toggleSyncMode();
+  applySyncModeUI();
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
@@ -2013,8 +2095,9 @@ function init(){
     if(btn) btn.click();
   }
   window.addEventListener('resize', debounce(() => { drawPie(); drawOrderTrend(); drawOrderChannel(); }, 200));
+  if(isLocked()){ showLockScreen(); return; }
   renderAll();
-  setTimeout(() => { if(state.settings.syncAuto && state.settings.syncUrl) initialSync(); }, 600);
+  setTimeout(() => { if(state.settings.syncAuto) initialSync(); }, 600);
 }
 init();
 </script>
